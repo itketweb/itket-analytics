@@ -159,7 +159,7 @@ const metricOf = (m, k) => k === 'signups' ? signups(m) : m.total[k];
 const sumDays = (m, k, n) => k === 'signups' ? (m.signups || []).filter((r) => +r.date.slice(8) <= n).reduce((a, r) => a + r.count, 0) : m.daily.filter((r) => +r.date.slice(8) <= n).reduce((a, r) => a + r[k], 0);
 const prevKey = (k) => { const [y, mo] = k.split('-').map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`; };
 const yoyKey = (k) => `${+k.slice(0, 4) - 1}-${k.slice(5)}`;
-// GA4 태그가 작동하지 않아 사실상 집계가 없는 달(세션 100 미만, 진행 중인 달 제외) — 비교·합산에서 신뢰하지 않는다
+// 방문 기록이 사실상 없는 달(세션 100 미만, 진행 중인 달 제외) — 비교·합산에서 제외한다
 const isGap = (m) => !!m && !m.partial && m.total.sessions < 100;
 const okM = (k) => { const m = D.months[k]; return m && !isGap(m) ? m : undefined; };
 const dl = (cur, prev, label) => {
@@ -183,7 +183,7 @@ function header() {
   if (h > 6) el.textContent += ' · 갱신이 지연되고 있습니다';
   $('years').innerHTML = years.map((y) => `<button class="y ${sel.startsWith(y) ? 'on' : ''}" data-s="${y}">${y}년</button>`).join('');
   const y = sel.slice(0, 4);
-  $('mons').innerHTML = `<button class="m all ${sel === y ? 'on' : ''}" data-s="${y}">연간</button>` + Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, '0')}`; const gap = isGap(D.months[k]); return `<button class="m ${sel === k ? 'on' : ''}" data-s="${k}" ${D.months[k] && !gap ? '' : 'disabled'}${gap ? ' title="GA4 수집 공백(태그 미작동)으로 집계가 없는 달입니다"' : ''}>${i + 1}월</button>`; }).join('');
+  $('mons').innerHTML = `<button class="m all ${sel === y ? 'on' : ''}" data-s="${y}">연간</button>` + Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, '0')}`; const gap = isGap(D.months[k]); return `<button class="m ${sel === k ? 'on' : ''}" data-s="${k}" ${D.months[k] && !gap ? '' : 'disabled'}${gap ? ' title="방문 기록이 거의 없는 달입니다 (고도몰 통계도 0 — 사이트 미운영 구간으로 추정)"' : ''}>${i + 1}월</button>`; }).join('');
   document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => go(b.dataset.s));
 }
 function go(s) { sel = s; history.replaceState(null, '', '#' + s); render(); window.scrollTo({ top: 0 }); }
@@ -340,7 +340,7 @@ function renderYear(y) {
   const psum = (key) => { const all = Array.from({ length: 12 }, (_, i) => D.months[`${py}-${String(i + 1).padStart(2, '0')}`]); if (all.some((m) => !m || isGap(m))) return null; return all.reduce((a, m) => a + metricOf(m, key), 0); };   // 작년에 공백 월이 있으면 비교하지 않음
   const have = ks.filter((k) => okM(k)).length;
   const cards = [['세션', 'sessions'], ['페이지뷰', 'screenPageViews'], ['신규 방문자', 'newUsers'], ['회원가입', 'signups']].map(([l, key]) => `<div class="kpi"><div class="l">${l} (${y}년 누계)</div><div class="v">${fmt(sum(key))}</div>${have === 12 ? dl(sum(key), psum(key), '전년') : ''}</div>`);
-  const rowsHtml = ks.map((k, i) => { const m = okM(k); const gap = isGap(D.months[k]); return `<tr class="${m ? 'link' : ''}" data-s="${m ? k : ''}"><td>${i + 1}월${m && m.partial ? ' <span style="color:var(--sub)">(진행 중)</span>' : ''}</td>${gap ? '<td class="n" colspan="5" style="color:var(--warn)">집계 없음 — GA4 수집 공백(태그 미작동)</td>' : m ? ['activeUsers', 'sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n">${fmt(metricOf(m, key))}</td>`).join('') : '<td class="n" colspan="5" style="color:var(--sub)">―</td>'}</tr>`; }).join('');
+  const rowsHtml = ks.map((k, i) => { const m = okM(k); const gap = isGap(D.months[k]); return `<tr class="${m ? 'link' : ''}" data-s="${m ? k : ''}"><td>${i + 1}월${m && m.partial ? ' <span style="color:var(--sub)">(진행 중)</span>' : ''}</td>${gap ? '<td class="n" colspan="5" style="color:var(--warn)">집계 없음 — 방문 기록 거의 없음 (사이트 미운영 구간 추정)</td>' : m ? ['activeUsers', 'sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n">${fmt(metricOf(m, key))}</td>`).join('') : '<td class="n" colspan="5" style="color:var(--sub)">―</td>'}</tr>`; }).join('');
   $('main').innerHTML = `
     <div class="kpis">${cards.join('')}</div>
     <div class="card"><h2>월별 추이 ${seg(METRICS, annMetric, 'am')}</h2>${monthlyChart(vals, ks.map((k) => !!okM(k)), ks.map((k) => !!(D.months[k] && D.months[k].partial)), annMetric === 'signups' ? '건' : '', annMetric !== 'activeUsers')}</div>
