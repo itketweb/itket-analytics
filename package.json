@@ -1,0 +1,13 @@
+{
+  "name": "itket-analytics",
+  "private": true,
+  "type": "module",
+  "description": "고도몰 애널리틱스 월간 취합 리포트 생성기",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "sample": "node scripts/make-sample.mjs"
+  },
+  "dependencies": {
+    "xlsx": "0.18.5"
+  }
+}
