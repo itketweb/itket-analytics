@@ -12,6 +12,8 @@ on:
 permissions:
   contents: write
   issues: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: update-dashboard
@@ -63,3 +65,21 @@ jobs:
           elif [ -n "$open" ]; then
             gh issue close "$open" --comment '수집이 다시 정상 동작해 자동으로 닫습니다.'
           fi
+
+  deploy:
+    needs: update
+    # 수집이 실패해도 마지막 성공 데이터로 화면은 계속 배포한다
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

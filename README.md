@@ -15,9 +15,13 @@ itket.com 의 GA4 데이터를 **자동으로 모아 보여주는 월별 대시�
    - `GA4_PROPERTY_ID` = 속성 ID 숫자
    - `GA4_SERVICE_ACCOUNT` = 받은 JSON 키 파일의 **내용 전체**
 5. Actions → **Update Dashboard** → Run workflow. 첫 실행은 `config/ga4.json` 의 `startMonth` 부터 현재까지 한꺼번에 채운다.
-6. **볼 곳 연결(비공개 권장)** — Cloudflare Pages 에서 이 저장소를 연결(빌드 명령 없음, 출력 디렉터리 `site`)하고 Cloudflare Access 로 허용할 Google 계정만 로그인하게 한다. 공개 URL 로 두지 않는다.
+6. 끝. 대시보드는 **https://itketweb.github.io/itket-analytics/** 에서 본다 (갱신될 때마다 GitHub Pages 로 자동 배포).
 
-키 JSON 은 파일·커밋·채팅에 남기지 않는다. Secret 에만 넣는다.
+## 공개 범위
+- 저장소와 대시보드는 **공개**다 (팀 내부 편의용, 로그인 없음). URL 을 아는 사람은 누구나 방문자·인기 페이지·유입·UTM 캠페인명 집계를 볼 수 있다. 페이지에는 검색 제외(noindex)가 걸려 있다.
+- 개인정보·IP·주문/회원 정보는 수집하지 않는다 (GA4 집계 수치만).
+- 키(JSON)와 속성 ID 는 Secret 에만 두고 저장소·커밋·채팅에 남기지 않는다.
+- 비공개로 되돌리려면 저장소 Settings → Danger Zone 에서 바꾸되, Pages 는 유료 플랜이 필요하므로 열람 방식을 다시 정해야 한다.
 
 ## 구성
 | 경로 | 역할 |
