@@ -14,6 +14,7 @@ const CFG = {
   PROPERTY_ID: '257396991',   // GA4 관리 → 속성 설정 → 속성 ID
   START_MONTH: '2025-01',
   SIGNUP_EVENT: 'sign_up',
+  JOIN_DONE_PATH: '/member/join_ok.php',     // 회원가입 완료 화면 — 사이트가 sign_up 이벤트를 보내지 않을 때의 대체 기준
   TOP_ROWS: 50,
   FILE_NAME: 'itket-analytics-data.json',
   BUDGET_MS: 4.5 * 60 * 1000,                // 한 번 실행에 쓸 최대 시간(6분 제한 대비)
@@ -82,6 +83,19 @@ function shopStats_(range) {
   return { goods: top(acc.goods, 100), categories: top(acc.categories, 100), boards: top(acc.boards, 30) };
 }
 
+/** 회원가입 수(일별). GA4 에 sign_up 이벤트가 있으면 그것을, 없으면 가입 완료 화면(join_ok)을 본 사용자 수를 쓴다.
+ *  (이 사이트는 가입 완료 시 sign_up 이벤트를 보내지 않아 2025년부터 이벤트가 0건 — 2026-10-14 확인) */
+function signupsOf_(range) {
+  const ev = q_(['date'], ['eventCount'], range, {
+    dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: CFG.SIGNUP_EVENT } } },
+  });
+  if (ev.reduce((a, r) => a + r.eventCount, 0) > 0) return { source: 'event', rows: ev.map((r) => ({ date: ymd_(r.date), count: r.eventCount })) };
+  const pv = q_(['date'], ['activeUsers'], range, {
+    dimensionFilter: { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'EXACT', value: CFG.JOIN_DONE_PATH } } },
+  });
+  return { source: 'join_ok', rows: pv.map((r) => ({ date: ymd_(r.date), count: r.activeUsers })) };
+}
+
 function collectMonth_(m, today, reuse) {
   const range = { startDate: m + '-01', endDate: m === today.slice(0, 7) ? today : lastDay_(m) };
   const top = (metric) => ({ orderBys: [{ metric: { metricName: metric }, desc: true }], limit: CFG.TOP_ROWS });
@@ -92,9 +106,7 @@ function collectMonth_(m, today, reuse) {
   const channels = q_(['sessionDefaultChannelGroup'], ['sessions', 'activeUsers'], range, top('sessions'));
   const campaigns = q_(['sessionCampaignName', 'sessionSourceMedium'], ['sessions', 'activeUsers'], range, top('sessions'));
   const devices = q_(['deviceCategory'], ['activeUsers', 'sessions'], range, top('sessions'));
-  const signups = q_(['date'], ['eventCount'], range, {
-    dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: CFG.SIGNUP_EVENT } } },
-  });
+  const sg = signupsOf_(range);
   // 무거운 조회: 재사용 가능한 최근 값이 있으면 다시 계산하지 않는다
   const fresh = reuse && reuse.goods && reuse.shopUpdated && (Date.now() - Date.parse(reuse.shopUpdated) < CFG.SHOP_REFRESH_MIN * 60000);
   const shop = fresh ? { goods: reuse.goods, categories: reuse.categories, boards: reuse.boards } : shopStats_(range);
@@ -110,7 +122,7 @@ function collectMonth_(m, today, reuse) {
     pages: pages, sources: sources, channels: channels,
     campaigns: campaigns.filter((r) => r.sessionCampaignName && r.sessionCampaignName !== '(not set)' && r.sessionCampaignName !== '(direct)'),
     devices: devices,
-    signups: signups.map((r) => ({ date: ymd_(r.date), count: r.eventCount })),
+    signups: sg.rows, signupSource: sg.source,   // 'event' = GA4 sign_up 이벤트, 'join_ok' = 가입 완료 화면(일별 방문자) 기준
     goods: shop.goods, categories: shop.categories, boards: shop.boards,
     shopUpdated: fresh ? reuse.shopUpdated : new Date().toISOString(),
   };
@@ -166,6 +178,32 @@ function collectAll() {
     if (!errors.length) store.updated = new Date().toISOString();
     save_(store);
     if (errors.length) throw new Error(errors.join('\n'));   // 실행 기록에 실패로 남김
+  } finally { lock.releaseLock(); }
+}
+
+/** 한 번만 실행: 이미 저장된 과거 월의 회원가입 수를 새 기준(signupsOf_)으로 채운다. 호출 제한을 피하려고 월마다 잠깐 쉰다. */
+function backfillSignups() {
+  checkProperty_();
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return;
+  try {
+    const started = Date.now();
+    const today = todayKst_();
+    const store = load_();
+    const keys = Object.keys(store.months).sort();
+    let done = 0;
+    for (const m of keys) {
+      if (Date.now() - started > CFG.BUDGET_MS) break;
+      const x = store.months[m];
+      if (x.signupSource) continue;                       // 이미 새 기준
+      if (x.total && x.total.sessions < 100) { x.signupSource = 'none'; continue; }   // 방문이 거의 없던 달은 건너뜀
+      const range = { startDate: m + '-01', endDate: m === today.slice(0, 7) ? today : lastDay_(m) };
+      const sg = signupsOf_(range);
+      x.signups = sg.rows; x.signupSource = sg.source; done++;
+      Utilities.sleep(1500);
+    }
+    save_(store);
+    Logger.log('보정한 달: ' + done + ' / 전체 ' + keys.length + (Date.now() - started > CFG.BUDGET_MS ? ' (시간 초과 — 다시 실행하면 이어서 진행)' : ''));
   } finally { lock.releaseLock(); }
 }
 

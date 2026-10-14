@@ -388,6 +388,7 @@ function renderMonth(k) {
     let sub = '';
     if (key === 'activeUsers') sub = `<div class="l" style="margin-top:0.25rem" title="한 달 동안 같은 사람을 한 번만 센 값(GA4 기본 방식)입니다. 위 값은 고도몰 통계와 같이 '날마다 온 사람'을 더한 값입니다.">순 방문자(월 중복 제거) ${fmt(m.total.activeUsers)}</div>`;
     if (key === 'screenPageViews') { const x = suspOf(m); if (x.excess > 0) sub = `<div class="l" style="margin-top:0.25rem;color:var(--warn)" title="방문자 1명당 조회수가 ${SUSP_RATIO}배를 넘는 페이지의 초과분(내부 새로고침 의심)을 뺀 추정값입니다. 고도몰 통계와 비교할 때 참고하세요.">⚠ 내부 새로고침 의심분 제외 ≈ ${fmt(cur - x.excess)}</div>`; }
+    if (key === 'signups' && m.signupSource === 'join_ok') sub = `<div class="l" style="margin-top:2px" title="이 사이트는 가입 완료 시 GA4 sign_up 이벤트를 보내지 않아, 가입 완료 화면(/member/join_ok.php)을 본 사용자 수를 세었습니다. 고도몰 통계와 비교해 보세요.">가입 완료 화면 기준</div>`;
     return `<div class="kpi"><div class="l">${l}</div><div class="v">${fmt(cur)}</div>${d}${sub}</div>`;
   });
   const avg = m.total.activeUsers ? m.total.userEngagementDuration / m.total.activeUsers : 0;
