@@ -20,6 +20,9 @@ const CFG = {
   SCHEMA: 2,                                 // 수집 항목이 바뀌면 올린다 → 과거 월을 다시 채움
   LIVE_CACHE_SEC: 60,                        // 실시간 응답 캐시 (GA4 API 한도 보호)
   LIVE_COOLDOWN_SEC: 300,                    // 한도 오류 직후 API 재호출을 쉬는 시간
+  LIVE_DEVICES_SEC: 300,                     // 기기 구분은 5분 캐시 (매번 부르지 않음)
+  LIVE_BUDGET: [[9000, 60], [5000, 120], [2500, 300]],   // [남은 시간당 토큰이 이 값 초과, 캐시 초] — 남을수록 자주, 줄면 간격을 늘림
+  LIVE_BUDGET_MIN_TTL: 900,                  // 남은 토큰이 2,500 이하일 때
   SHOP_REFRESH_MIN: 120,                     // 인기 상품·카테고리·게시판(무거운 조회)은 이 간격으로만 새로 계산
 };
 let LAST_QUOTA_ = null;                      // 마지막 API 응답의 한도 사용량(진단용)
@@ -131,7 +134,8 @@ function collectRecent() {
   try {
     const today = todayKst_(), cur = today.slice(0, 7);
     const store = load_();
-    store.months[cur] = collectMonth_(cur, today, store.months[cur]);
+    try { store.months[cur] = collectMonth_(cur, today, store.months[cur]); }
+    catch (e) { if (/Exhausted|quota/i.test(String((e && e.message) || e))) return; throw e; }   // 시간당 한도 소진은 조용히 건너뜀(다음 15분에 재시도)
     store.updated = new Date().toISOString();
     store.quota = LAST_QUOTA_ && { at: new Date().toISOString(), q: LAST_QUOTA_ };
     save_(store);
@@ -164,35 +168,53 @@ function collectAll() {
   } finally { lock.releaseLock(); }
 }
 
-/** 실시간(최근 30분) — GA4 Realtime API. 한도 오류 시 마지막 성공값을 stale 로 돌려준다. */
+/** 실시간(최근 30분) — GA4 Realtime API.
+ *  시간당 한도(프로젝트·속성당 14,000토큰)를 넘지 않도록, 매 응답의 '남은 토큰'을 보고 갱신 간격(캐시 시간)을 스스로 늘린다.
+ *  한도 오류가 나면 5분간 API 를 쉬고 마지막 성공 값을 stale 로 돌려준다. */
 function liveNow_() {
   const cache = CacheService.getScriptCache();
   const hit = cache.get('live');
   if (hit) return JSON.parse(hit);
   if (cache.get('liveCool')) return staleLive_('조회 한도 회복 대기 중');
   try {
-    const call = (dims, metrics, extra) => AnalyticsData.Properties.runRealtimeReport(Object.assign({
-      dimensions: dims.map((name) => ({ name })),
-      metrics: metrics.map((name) => ({ name })),
-      limit: 20,
-    }, extra || {}), 'properties/' + CFG.PROPERTY_ID);
-    const first = call([], ['activeUsers'], { returnPropertyQuota: true });
-    const total = rows_(first)[0] || { activeUsers: 0 };
+    let cost = 0, remaining = null;
+    const call = (dims, metrics, extra) => {
+      const resp = AnalyticsData.Properties.runRealtimeReport(Object.assign({
+        dimensions: dims.map((name) => ({ name })),
+        metrics: metrics.map((name) => ({ name })),
+        limit: 20,
+        returnPropertyQuota: true,
+      }, extra || {}), 'properties/' + CFG.PROPERTY_ID);
+      const q = resp.propertyQuota && (resp.propertyQuota.tokensPerProjectPerHour || resp.propertyQuota.tokensPerHour);
+      if (q) { cost += q.consumed || 0; remaining = q.remaining; }
+      return resp;
+    };
+    const total = rows_(call([], ['activeUsers']))[0] || { activeUsers: 0 };
+    const pages = rows_(call(['unifiedScreenName'], ['activeUsers', 'screenPageViews'], { orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8 }));
+    const minutes = rows_(call(['minutesAgo'], ['activeUsers'], { orderBys: [{ dimension: { dimensionName: 'minutesAgo' } }], limit: 31 }));
+    let devices;
+    const dv = cache.get('liveDev');
+    if (dv) devices = JSON.parse(dv);
+    else { devices = rows_(call(['deviceCategory'], ['activeUsers'])); cache.put('liveDev', JSON.stringify(devices), CFG.LIVE_DEVICES_SEC); }
+    const ttl = liveTtl_(remaining);
     const out = {
       at: new Date().toISOString(),
       activeUsers: total.activeUsers || 0,
-      pages: rows_(call(['unifiedScreenName'], ['activeUsers', 'screenPageViews'], { orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8 })),
-      devices: rows_(call(['deviceCategory'], ['activeUsers'])),
-      minutes: rows_(call(['minutesAgo'], ['activeUsers'], { orderBys: [{ dimension: { dimensionName: 'minutesAgo' } }], limit: 31 })),
-      quota: first.propertyQuota || null,
+      pages: pages, devices: devices, minutes: minutes,
+      budget: { cost: cost, remaining: remaining, ttl: ttl },   // 이번 갱신에 쓴 토큰 / 남은 토큰 / 다음 갱신까지 대기(초)
     };
-    cache.put('live', JSON.stringify(out), CFG.LIVE_CACHE_SEC);
+    cache.put('live', JSON.stringify(out), ttl);
     cache.put('liveLast', JSON.stringify(out), 21600);
     return out;
   } catch (e) {
     cache.put('liveCool', '1', CFG.LIVE_COOLDOWN_SEC);
     return staleLive_(String((e && e.message) || e));
   }
+}
+function liveTtl_(remaining) {
+  if (remaining == null) return CFG.LIVE_CACHE_SEC;
+  for (let i = 0; i < CFG.LIVE_BUDGET.length; i++) if (remaining > CFG.LIVE_BUDGET[i][0]) return CFG.LIVE_BUDGET[i][1];
+  return CFG.LIVE_BUDGET_MIN_TTL;
 }
 function staleLive_(why) {
   const last = CacheService.getScriptCache().get('liveLast');
