@@ -18,8 +18,11 @@ const CFG = {
   FILE_NAME: 'itket-analytics-data.json',
   BUDGET_MS: 4.5 * 60 * 1000,                // 한 번 실행에 쓸 최대 시간(6분 제한 대비)
   SCHEMA: 2,                                 // 수집 항목이 바뀌면 올린다 → 과거 월을 다시 채움
-  LIVE_CACHE_SEC: 20,
+  LIVE_CACHE_SEC: 60,                        // 실시간 응답 캐시 (GA4 API 한도 보호)
+  LIVE_COOLDOWN_SEC: 300,                    // 한도 오류 직후 API 재호출을 쉬는 시간
+  SHOP_REFRESH_MIN: 120,                     // 인기 상품·카테고리·게시판(무거운 조회)은 이 간격으로만 새로 계산
 };
+let LAST_QUOTA_ = null;                      // 마지막 API 응답의 한도 사용량(진단용)
 const M = ['activeUsers', 'newUsers', 'sessions', 'screenPageViews', 'userEngagementDuration', 'engagedSessions'];
 
 function todayKst_() { return Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd'); }
@@ -43,8 +46,11 @@ function q_(dims, metrics, range, extra) {
     dimensions: dims.map((name) => ({ name })),
     metrics: metrics.map((name) => ({ name })),
     limit: 1000,
+    returnPropertyQuota: true,
   }, extra || {});
-  return rows_(AnalyticsData.Properties.runReport(req, 'properties/' + CFG.PROPERTY_ID));
+  const resp = AnalyticsData.Properties.runReport(req, 'properties/' + CFG.PROPERTY_ID);
+  if (resp.propertyQuota) LAST_QUOTA_ = resp.propertyQuota;
+  return rows_(resp);
 }
 
 /** 고도몰 URL 규칙으로 상품(goodsNo)·카테고리(cateCd)·게시판(bdId) 조회수를 집계한다. */
@@ -53,7 +59,7 @@ function shopStats_(range) {
   const rows = q_(['pagePathPlusQueryString', 'pageTitle'], ['screenPageViews', 'activeUsers'], range, {
     dimensionFilter: { orGroup: { expressions: [contains('goods_view'), contains('goods_list'), contains('board/')] } },
     orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-    limit: 10000,
+    limit: 5000,
   });
   const acc = { goods: {}, categories: {}, boards: {} };
   const add = (bucket, id, r) => {
@@ -72,7 +78,7 @@ function shopStats_(range) {
   return { goods: top(acc.goods, 100), categories: top(acc.categories, 100), boards: top(acc.boards, 30) };
 }
 
-function collectMonth_(m, today) {
+function collectMonth_(m, today, reuse) {
   const range = { startDate: m + '-01', endDate: m === today.slice(0, 7) ? today : lastDay_(m) };
   const top = (metric) => ({ orderBys: [{ metric: { metricName: metric }, desc: true }], limit: CFG.TOP_ROWS });
   const total = q_([], M, range);
@@ -85,7 +91,9 @@ function collectMonth_(m, today) {
   const signups = q_(['date'], ['eventCount'], range, {
     dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: CFG.SIGNUP_EVENT } } },
   });
-  const shop = shopStats_(range);
+  // 무거운 조회: 재사용 가능한 최근 값이 있으면 다시 계산하지 않는다
+  const fresh = reuse && reuse.goods && reuse.shopUpdated && (Date.now() - Date.parse(reuse.shopUpdated) < CFG.SHOP_REFRESH_MIN * 60000);
+  const shop = fresh ? { goods: reuse.goods, categories: reuse.categories, boards: reuse.boards } : shopStats_(range);
   const t = total[0] || {};
   const pick = (r) => { const o = {}; M.forEach((k) => (o[k] = r[k] || 0)); return o; };
   return {
@@ -100,6 +108,7 @@ function collectMonth_(m, today) {
     devices: devices,
     signups: signups.map((r) => ({ date: ymd_(r.date), count: r.eventCount })),
     goods: shop.goods, categories: shop.categories, boards: shop.boards,
+    shopUpdated: fresh ? reuse.shopUpdated : new Date().toISOString(),
   };
 }
 
@@ -122,8 +131,9 @@ function collectRecent() {
   try {
     const today = todayKst_(), cur = today.slice(0, 7);
     const store = load_();
-    store.months[cur] = collectMonth_(cur, today);
+    store.months[cur] = collectMonth_(cur, today, store.months[cur]);
     store.updated = new Date().toISOString();
+    store.quota = LAST_QUOTA_ && { at: new Date().toISOString(), q: LAST_QUOTA_ };
     save_(store);
   } finally { lock.releaseLock(); }
 }
@@ -154,26 +164,43 @@ function collectAll() {
   } finally { lock.releaseLock(); }
 }
 
-/** 실시간(최근 30분) — GA4 Realtime API. */
+/** 실시간(최근 30분) — GA4 Realtime API. 한도 오류 시 마지막 성공값을 stale 로 돌려준다. */
 function liveNow_() {
   const cache = CacheService.getScriptCache();
   const hit = cache.get('live');
   if (hit) return JSON.parse(hit);
-  const run = (dims, metrics, extra) => rows_(AnalyticsData.Properties.runRealtimeReport(Object.assign({
-    dimensions: dims.map((name) => ({ name })),
-    metrics: metrics.map((name) => ({ name })),
-    limit: 20,
-  }, extra || {}), 'properties/' + CFG.PROPERTY_ID));
-  const total = run([], ['activeUsers'])[0] || { activeUsers: 0 };
-  const out = {
-    at: new Date().toISOString(),
-    activeUsers: total.activeUsers || 0,
-    pages: run(['unifiedScreenName'], ['activeUsers', 'screenPageViews'], { orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8 }),
-    devices: run(['deviceCategory'], ['activeUsers']),
-    minutes: run(['minutesAgo'], ['activeUsers'], { orderBys: [{ dimension: { dimensionName: 'minutesAgo' } }], limit: 31 }),
-  };
-  cache.put('live', JSON.stringify(out), CFG.LIVE_CACHE_SEC);
-  return out;
+  if (cache.get('liveCool')) return staleLive_('조회 한도 회복 대기 중');
+  try {
+    const call = (dims, metrics, extra) => AnalyticsData.Properties.runRealtimeReport(Object.assign({
+      dimensions: dims.map((name) => ({ name })),
+      metrics: metrics.map((name) => ({ name })),
+      limit: 20,
+    }, extra || {}), 'properties/' + CFG.PROPERTY_ID);
+    const first = call([], ['activeUsers'], { returnPropertyQuota: true });
+    const total = rows_(first)[0] || { activeUsers: 0 };
+    const out = {
+      at: new Date().toISOString(),
+      activeUsers: total.activeUsers || 0,
+      pages: rows_(call(['unifiedScreenName'], ['activeUsers', 'screenPageViews'], { orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8 })),
+      devices: rows_(call(['deviceCategory'], ['activeUsers'])),
+      minutes: rows_(call(['minutesAgo'], ['activeUsers'], { orderBys: [{ dimension: { dimensionName: 'minutesAgo' } }], limit: 31 })),
+      quota: first.propertyQuota || null,
+    };
+    cache.put('live', JSON.stringify(out), CFG.LIVE_CACHE_SEC);
+    cache.put('liveLast', JSON.stringify(out), 21600);
+    return out;
+  } catch (e) {
+    cache.put('liveCool', '1', CFG.LIVE_COOLDOWN_SEC);
+    return staleLive_(String((e && e.message) || e));
+  }
+}
+function staleLive_(why) {
+  const last = CacheService.getScriptCache().get('liveLast');
+  if (!last) return { error: why };
+  const o = JSON.parse(last);
+  o.stale = true;
+  o.staleReason = String(why).slice(0, 160);
+  return o;
 }
 
 /** 웹앱: ?mode=live | ?mode=cur | (기본) 전체. */
@@ -186,7 +213,7 @@ function doGet(e) {
       const store = load_(), cur = todayKst_().slice(0, 7), prev = addMonth_(cur, -1);
       const months = {};
       [cur, prev].forEach((m) => { if (store.months[m]) months[m] = store.months[m]; });
-      body = { updated: store.updated, months: months };
+      body = { updated: store.updated, months: months, quota: store.quota || null };
     } else body = load_();
   } catch (err) { body = { error: String(err && err.message || err) }; }
   return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
