@@ -1,0 +1,92 @@
+// GA4 → data/ga4/YYYY-MM.json  (매 실행마다 당월·전월은 항상 새로 받고, 없는 과거 월은 채운다)
+// 환경변수: GA4_PROPERTY_ID(숫자), GA4_SERVICE_ACCOUNT(서비스 계정 JSON). GA4_MOCK=1 이면 가짜 데이터(테스트용).
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { getToken, runReport, rows } from './ga4.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DATA = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, 'data');
+const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'ga4.json'), 'utf8'));
+const OUT = path.join(DATA, 'ga4');
+fs.mkdirSync(OUT, { recursive: true });
+
+const kst = () => new Date(Date.now() + 9 * 3600e3);
+const ymd = (d) => d.toISOString().slice(0, 10);
+const today = ymd(kst());
+const curMonth = today.slice(0, 7);
+const lastDay = (m) => { const [y, mo] = m.split('-').map(Number); return ymd(new Date(Date.UTC(y, mo, 0))); };
+const addMonth = (m, n) => { const [y, mo] = m.split('-').map(Number); const d = new Date(Date.UTC(y, mo - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+const months = [];
+for (let m = cfg.startMonth; m <= curMonth; m = addMonth(m, 1)) months.push(m);
+const refresh = new Set([curMonth, addMonth(curMonth, -1)]);
+const todo = months.filter((m) => refresh.has(m) || !fs.existsSync(path.join(OUT, `${m}.json`)));
+console.log(`수집 대상 ${todo.length}개월: ${todo.join(', ')}`);
+
+const M = ['activeUsers', 'newUsers', 'sessions', 'screenPageViews', 'userEngagementDuration', 'engagedSessions'];
+const N = cfg.topRows || 50;
+
+async function collectReal(m, ctx) {
+  const dateRanges = [{ startDate: `${m}-01`, endDate: m === curMonth ? today : lastDay(m) }];
+  const q = (dimensions, metrics, extra = {}) => runReport(ctx.token, ctx.property, { dateRanges, dimensions: dimensions.map((name) => ({ name })), metrics: metrics.map((name) => ({ name })), limit: 1000, ...extra }).then(rows);
+  const top = (metric) => ({ orderBys: [{ metric: { metricName: metric }, desc: true }], limit: N });
+  const [total, daily, pages, sources, channels, campaigns, devices, signups] = await Promise.all([
+    q([], M),
+    q(['date'], M, { orderBys: [{ dimension: { dimensionName: 'date' } }] }),
+    q(['pagePath'], ['screenPageViews', 'activeUsers', 'userEngagementDuration'], top('screenPageViews')),
+    q(['sessionSourceMedium'], ['sessions', 'activeUsers', 'newUsers', 'engagedSessions'], top('sessions')),
+    q(['sessionDefaultChannelGroup'], ['sessions', 'activeUsers'], top('sessions')),
+    q(['sessionCampaignName', 'sessionSourceMedium'], ['sessions', 'activeUsers'], top('sessions')),
+    q(['deviceCategory'], ['activeUsers', 'sessions'], top('sessions')),
+    q(['date'], ['eventCount'], { dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: cfg.signupEvent } } } }),
+  ]);
+  const t = total[0] || {};
+  return {
+    total: Object.fromEntries(M.map((k) => [k, t[k] || 0])),
+    daily: daily.map((r) => ({ date: `${r.date.slice(0, 4)}-${r.date.slice(4, 6)}-${r.date.slice(6)}`, ...Object.fromEntries(M.map((k) => [k, r[k]])) })),
+    pages, sources, channels,
+    campaigns: campaigns.filter((r) => r.sessionCampaignName && r.sessionCampaignName !== '(not set)' && r.sessionCampaignName !== '(direct)'),
+    devices,
+    signups: signups.map((r) => ({ date: `${r.date.slice(0, 4)}-${r.date.slice(4, 6)}-${r.date.slice(6)}`, count: r.eventCount })),
+  };
+}
+
+function collectMock(m) {
+  let s = [...m].reduce((a, c) => a * 31 + c.charCodeAt(0), 7);
+  const rnd = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+  const end = m === curMonth ? Number(today.slice(8)) : Number(lastDay(m).slice(8));
+  const daily = Array.from({ length: end }, (_, i) => {
+    const u = Math.round(260 + rnd() * 160), sess = Math.round(u * 1.3), pv = Math.round(sess * (2 + rnd() * 2));
+    return { date: `${m}-${String(i + 1).padStart(2, '0')}`, activeUsers: u, newUsers: Math.round(u * 0.6), sessions: sess, screenPageViews: pv, userEngagementDuration: sess * Math.round(40 + rnd() * 50), engagedSessions: Math.round(sess * 0.7) };
+  });
+  const sum = (k) => daily.reduce((a, r) => a + r[k], 0);
+  const total = Object.fromEntries(M.map((k) => [k, k === 'activeUsers' ? Math.round(sum(k) * 0.8) : sum(k)]));
+  const paths = ['/', '/goods/goods_view.php', '/dbk/dbk_estimate_list.php', '/goods/goods_list.php', '/board/list.php', '/member/join.php'];
+  const pages = paths.map((p, i) => ({ pagePath: p, screenPageViews: Math.round(total.screenPageViews / (i + 2.2)), activeUsers: Math.round(total.activeUsers / (i + 2.6)), userEngagementDuration: Math.round(total.userEngagementDuration / (i + 5)) }));
+  const src = ['google / organic', 'naver / organic', '(direct) / (none)', 'naver / cpc', 'kakao / referral'];
+  const sources = src.map((x, i) => ({ sessionSourceMedium: x, sessions: Math.round(total.sessions / (i + 1.8)), activeUsers: Math.round(total.activeUsers / (i + 2)), newUsers: Math.round(total.newUsers / (i + 2.4)), engagedSessions: Math.round(total.engagedSessions / (i + 2)) }));
+  return {
+    total, daily, pages, sources,
+    channels: [['Organic Search', 2], ['Direct', 3.4], ['Paid Search', 6], ['Referral', 9]].map(([n, d]) => ({ sessionDefaultChannelGroup: n, sessions: Math.round(total.sessions / d), activeUsers: Math.round(total.activeUsers / d) })),
+    campaigns: [{ sessionCampaignName: 'brand_search', sessionSourceMedium: 'naver / cpc', sessions: Math.round(total.sessions / 7), activeUsers: Math.round(total.activeUsers / 8) }],
+    devices: [['desktop', 1.6], ['mobile', 2.2], ['tablet', 14]].map(([n, d]) => ({ deviceCategory: n, activeUsers: Math.round(total.activeUsers / d), sessions: Math.round(total.sessions / d) })),
+    signups: daily.filter((_, i) => i % 3 === 0).map((r) => ({ date: r.date, count: 1 + Math.round(rnd() * 3) })),
+  };
+}
+
+let ctx = null, failed = 0;
+if (process.env.GA4_MOCK !== '1') {
+  const property = (process.env.GA4_PROPERTY_ID || '').trim();
+  const keyText = process.env.GA4_SERVICE_ACCOUNT;
+  if (!property || !keyText) { console.error('GA4_PROPERTY_ID / GA4_SERVICE_ACCOUNT 가 설정되지 않았습니다 (README 의 "처음 한 번만" 참고).'); process.exit(2); }
+  ctx = { property, token: await getToken(JSON.parse(keyText)) };
+}
+for (const m of todo) {
+  try {
+    const body = process.env.GA4_MOCK === '1' ? collectMock(m) : await collectReal(m, ctx);
+    fs.writeFileSync(path.join(OUT, `${m}.json`), JSON.stringify({ month: m, partial: m === curMonth, updated: new Date().toISOString(), ...body }));
+    console.log(`  ${m} 완료`);
+  } catch (e) { failed++; console.error(`  ${m} 실패: ${e.message}`); }
+}
+fs.writeFileSync(path.join(OUT, '_meta.json'), JSON.stringify({ updated: new Date().toISOString(), failed }));
+process.exit(failed ? 1 : 0);

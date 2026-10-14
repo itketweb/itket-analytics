@@ -2,12 +2,10 @@
   "name": "itket-analytics",
   "private": true,
   "type": "module",
-  "description": "고도몰 애널리틱스 월간 취합 리포트 생성기",
+  "description": "itket.com GA4 월간 대시보드 (자동 수집 → 정적 HTML)",
   "scripts": {
-    "build": "node scripts/build.mjs",
-    "sample": "node scripts/make-sample.mjs"
-  },
-  "dependencies": {
-    "xlsx": "0.18.5"
+    "collect": "node scripts/collect.mjs",
+    "build": "node scripts/build-site.mjs",
+    "mock": "GA4_MOCK=1 DATA_DIR=.sample/data SITE_DIR=.sample/site node scripts/collect.mjs && DATA_DIR=.sample/data SITE_DIR=.sample/site node scripts/build-site.mjs"
   }
 }
