@@ -29,6 +29,7 @@ button{font-family:inherit}
 .m:hover:not(:disabled):not(.on){background:var(--accbg)}
 .m.on{background:var(--accbg);color:var(--accink);font-weight:600}
 .m:disabled{opacity:.35;cursor:default}
+.flag{color:var(--warn);font-weight:700}
 .m.all{font-weight:600;margin-bottom:4px}
 .side .sfoot{margin-top:auto;font-size:11.5px;color:var(--sub);padding:0 8px;line-height:1.5}
 .wrap{min-width:0;display:flex;flex-direction:column}
@@ -132,7 +133,7 @@ td .sh{display:block;height:3px;background:var(--bar2);border-radius:2px;margin-
     <div id="liveBox" style="margin-bottom:16px"></div>
     <main id="main"></main>
   </div>
-  <div class="foot">고도몰 애널리틱스와 수치 정의가 달라 값이 다를 수 있습니다.</div>
+  <div class="foot">출처: Google Analytics 4 기준입니다. 고도몰 통계와는 측정 방식이 달라, 인기 상품·카테고리·게시판 순위는 거의 같지만 방문자는 한가한 날 GA4가 적고, 내부 새로고침 트래픽이 있으면 페이지뷰가 크게 벌어질 수 있습니다.</div>
 </div>
 </div>
 <script>
@@ -158,6 +159,9 @@ const metricOf = (m, k) => k === 'signups' ? signups(m) : m.total[k];
 const sumDays = (m, k, n) => k === 'signups' ? (m.signups || []).filter((r) => +r.date.slice(8) <= n).reduce((a, r) => a + r.count, 0) : m.daily.filter((r) => +r.date.slice(8) <= n).reduce((a, r) => a + r[k], 0);
 const prevKey = (k) => { const [y, mo] = k.split('-').map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`; };
 const yoyKey = (k) => `${+k.slice(0, 4) - 1}-${k.slice(5)}`;
+// GA4 태그가 작동하지 않아 사실상 집계가 없는 달(세션 100 미만, 진행 중인 달 제외) — 비교·합산에서 신뢰하지 않는다
+const isGap = (m) => !!m && !m.partial && m.total.sessions < 100;
+const okM = (k) => { const m = D.months[k]; return m && !isGap(m) ? m : undefined; };
 const dl = (cur, prev, label) => {
   if (prev == null || cur == null) return '';
   if (prev === 0) return cur === 0 ? '' : `<span class="d up">신규 <small>${label}</small></span>`;
@@ -179,7 +183,7 @@ function header() {
   if (h > 6) el.textContent += ' · 갱신이 지연되고 있습니다';
   $('years').innerHTML = years.map((y) => `<button class="y ${sel.startsWith(y) ? 'on' : ''}" data-s="${y}">${y}년</button>`).join('');
   const y = sel.slice(0, 4);
-  $('mons').innerHTML = `<button class="m all ${sel === y ? 'on' : ''}" data-s="${y}">연간</button>` + Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, '0')}`; return `<button class="m ${sel === k ? 'on' : ''}" data-s="${k}" ${D.months[k] ? '' : 'disabled'}>${i + 1}월</button>`; }).join('');
+  $('mons').innerHTML = `<button class="m all ${sel === y ? 'on' : ''}" data-s="${y}">연간</button>` + Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, '0')}`; const gap = isGap(D.months[k]); return `<button class="m ${sel === k ? 'on' : ''}" data-s="${k}" ${D.months[k] && !gap ? '' : 'disabled'}${gap ? ' title="GA4 수집 공백(태그 미작동)으로 집계가 없는 달입니다"' : ''}>${i + 1}월</button>`; }).join('');
   document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => go(b.dataset.s));
 }
 function go(s) { sel = s; history.replaceState(null, '', '#' + s); render(); window.scrollTo({ top: 0 }); }
@@ -270,7 +274,7 @@ const METRICS = [['activeUsers', '방문자'], ['sessions', '세션'], ['screenP
 const seg = (items, cur, attr) => `<span class="seg">${items.map(([k, l]) => `<button class="${k === cur ? 'on' : ''}" data-${attr}="${k}">${l}</button>`).join('')}</span>`;
 
 function renderMonth(k) {
-  const m = D.months[k], prev = D.months[prevKey(k)], yoy = D.months[yoyKey(k)];
+  const m = D.months[k], prev = okM(prevKey(k)), yoy = okM(yoyKey(k));
   const n = m.partial ? m.daily.length : null; // 진행 중인 달은 전월 같은 기간과 비교
   const cards = [['방문자', 'activeUsers'], ['신규 방문자', 'newUsers'], ['세션', 'sessions'], ['페이지뷰', 'screenPageViews'], ['회원가입', 'signups']].map(([l, key]) => {
     const cur = metricOf(m, key);
@@ -294,13 +298,17 @@ function renderMonth(k) {
   const srows = src[1].slice(0, 12), stot = tot(src[1], src[3]) || 1;
   const stable = srows.length ? `<table><thead><tr><th>${src[0]}</th><th class="n">${src[4][0]}</th><th class="n">${src[5][0]}</th></tr></thead><tbody>${srows.map((r) => `<tr><td><span class="tx" title="${esc(r[src[2]])}">${esc(r[src[2]])}${srcTab === 'utm' ? ` <span style="color:var(--sub)">· ${esc(r.sessionSourceMedium)}</span>` : ''}</span><span class="sh" style="width:${Math.max(2, r[src[3]] / stot * 100)}%"></span></td><td class="n">${fmt(r[src[4][1]])}</td><td class="n">${fmt(r[src[5][1]])}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음 (UTM이 붙은 유입이 없으면 비어 있습니다)</div>';
   const pmax = Math.max(1, ...m.pages.map((p) => p.screenPageViews));
-  const ptable = m.pages.length ? `<table><thead><tr><th>페이지</th><th class="n">조회수</th><th class="n">방문자</th><th class="n">체류</th></tr></thead><tbody>${m.pages.slice(0, 15).map((p) => `<tr><td><span class="tx" title="${esc(p.pagePath)}">${esc(p.pagePath)}</span><span class="sh" style="width:${Math.max(2, p.screenPageViews / pmax * 100)}%"></span></td><td class="n">${fmt(p.screenPageViews)}</td><td class="n">${fmt(p.activeUsers)}</td><td class="n">${dur(p.activeUsers ? p.userEngagementDuration / p.activeUsers : 0)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
+  // 방문자 1명당 조회수가 비정상적으로 높은 페이지(내부 새로고침·자동 접속 의심)는 표시하고, 고도몰 통계와 어긋나는 원인으로 알려 준다
+  const susp = (p) => p.screenPageViews > 1000 && p.screenPageViews / Math.max(1, p.activeUsers) > 40;
+  const suspPv = m.pages.filter(susp).reduce((a, p) => a + p.screenPageViews, 0);
+  const suspNote = suspPv ? `<div class="note" style="margin:10px 0 0">⚠ 표시된 페이지는 방문자 1명당 조회수가 매우 높아(40배 초과) 내부 새로고침·자동 접속일 수 있습니다. 합계 ${fmt(suspPv)}뷰(이 달 전체 페이지뷰의 ${(suspPv / Math.max(1, m.total.screenPageViews) * 100).toFixed(0)}%) — 고도몰 통계는 이런 조회를 제외하는 것으로 보여 이 부분에서 두 통계가 크게 벌어집니다.</div>` : '';
+  const ptable = m.pages.length ? `<table><thead><tr><th>페이지</th><th class="n">조회수</th><th class="n">방문자</th><th class="n">체류</th></tr></thead><tbody>${m.pages.slice(0, 15).map((p) => `<tr><td><span class="tx" title="${esc(p.pagePath)}">${susp(p) ? '<span class="flag" title="방문자 대비 조회수 과다">⚠</span> ' : ''}${esc(p.pagePath)}</span><span class="sh" style="width:${Math.max(2, p.screenPageViews / pmax * 100)}%"></span></td><td class="n">${fmt(p.screenPageViews)}</td><td class="n">${fmt(p.activeUsers)}</td><td class="n">${dur(p.activeUsers ? p.userEngagementDuration / p.activeUsers : 0)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
   $('main').innerHTML = `
     ${m.partial ? `<div class="note">진행 중인 달입니다 (${m.daily.length}일차까지 집계). 전월 대비는 같은 기간끼리 비교합니다.</div>` : ''}
     <div class="kpis">${cards.join('')}</div>
     <div class="card"><h2>일별 추이 ${seg(METRICS, chartMetric, 'cm')}</h2>${dailyChart(series.map((r) => r[chartMetric]), m.daily.map((r) => r.date), chartMetric === 'signups' ? '건' : '')}</div>
     <div class="grid">
-      <div class="card"><h2>인기 페이지</h2><div class="tw">${ptable}</div></div>
+      <div class="card"><h2>인기 페이지</h2><div class="tw">${ptable}</div>${suspNote}</div>
       <div class="card"><h2>유입 ${seg([['sourceMedium', '매체'], ['channel', '채널'], ['utm', 'UTM'], ['device', '기기']], srcTab, 'st')}</h2><div class="tw">${stable}</div></div>
     </div>
     ${shopCard(m)}`;
@@ -329,18 +337,18 @@ function renderYear(y) {
   const vals = ks.map((k) => val(k, annMetric));
   const sum = (key) => ks.reduce((a, k) => a + val(k, key), 0);
   const py = Number(y) - 1;
-  const psum = (key) => { const p = Array.from({ length: 12 }, (_, i) => D.months[`${py}-${String(i + 1).padStart(2, '0')}`]).filter(Boolean); return p.length ? p.reduce((a, m) => a + metricOf(m, key), 0) : null; };
-  const have = ks.filter((k) => D.months[k]).length;
+  const psum = (key) => { const all = Array.from({ length: 12 }, (_, i) => D.months[`${py}-${String(i + 1).padStart(2, '0')}`]); if (all.some((m) => !m || isGap(m))) return null; return all.reduce((a, m) => a + metricOf(m, key), 0); };   // 작년에 공백 월이 있으면 비교하지 않음
+  const have = ks.filter((k) => okM(k)).length;
   const cards = [['세션', 'sessions'], ['페이지뷰', 'screenPageViews'], ['신규 방문자', 'newUsers'], ['회원가입', 'signups']].map(([l, key]) => `<div class="kpi"><div class="l">${l} (${y}년 누계)</div><div class="v">${fmt(sum(key))}</div>${have === 12 ? dl(sum(key), psum(key), '전년') : ''}</div>`);
-  const rowsHtml = ks.map((k, i) => { const m = D.months[k]; return `<tr class="${m ? 'link' : ''}" data-s="${m ? k : ''}"><td>${i + 1}월${m && m.partial ? ' <span style="color:var(--sub)">(진행 중)</span>' : ''}</td>${m ? ['activeUsers', 'sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n">${fmt(metricOf(m, key))}</td>`).join('') : '<td class="n" colspan="5" style="color:var(--sub)">―</td>'}</tr>`; }).join('');
+  const rowsHtml = ks.map((k, i) => { const m = okM(k); const gap = isGap(D.months[k]); return `<tr class="${m ? 'link' : ''}" data-s="${m ? k : ''}"><td>${i + 1}월${m && m.partial ? ' <span style="color:var(--sub)">(진행 중)</span>' : ''}</td>${gap ? '<td class="n" colspan="5" style="color:var(--warn)">집계 없음 — GA4 수집 공백(태그 미작동)</td>' : m ? ['activeUsers', 'sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n">${fmt(metricOf(m, key))}</td>`).join('') : '<td class="n" colspan="5" style="color:var(--sub)">―</td>'}</tr>`; }).join('');
   $('main').innerHTML = `
     <div class="kpis">${cards.join('')}</div>
-    <div class="card"><h2>월별 추이 ${seg(METRICS, annMetric, 'am')}</h2>${monthlyChart(vals, ks.map((k) => !!D.months[k]), ks.map((k) => !!(D.months[k] && D.months[k].partial)), annMetric === 'signups' ? '건' : '', annMetric !== 'activeUsers')}</div>
+    <div class="card"><h2>월별 추이 ${seg(METRICS, annMetric, 'am')}</h2>${monthlyChart(vals, ks.map((k) => !!okM(k)), ks.map((k) => !!(D.months[k] && D.months[k].partial)), annMetric === 'signups' ? '건' : '', annMetric !== 'activeUsers')}</div>
     <div class="card"><h2>월별 요약 <span style="color:var(--sub);font-size:12px;font-weight:400">행을 누르면 해당 월로 이동 · 방문자는 월별 값(중복 포함)이라 합계를 내지 않습니다</span></h2><div class="tw"><table><thead><tr><th>월</th><th class="n">방문자</th><th class="n">세션</th><th class="n">페이지뷰</th><th class="n">신규 방문자</th><th class="n">회원가입</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr><td><b>합계</b></td><td class="n">―</td>${['sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n"><b>${fmt(sum(key))}</b></td>`).join('')}</tr></tfoot></table></div></div>`;
   bindDaily();
   document.querySelectorAll('[data-am]').forEach((b) => b.onclick = () => { annMetric = b.dataset.am; render(); });
   document.querySelectorAll('tr.link').forEach((r) => r.onclick = () => go(r.dataset.s));
-  document.querySelectorAll('rect.hit').forEach((r) => r.onclick = () => { const k = ks[+r.dataset.i]; if (D.months[k]) go(k); });
+  document.querySelectorAll('rect.hit').forEach((r) => r.onclick = () => { const k = ks[+r.dataset.i]; if (okM(k)) go(k); });
 }
 
 function render() {
