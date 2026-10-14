@@ -18,10 +18,11 @@ const CFG = {
   FILE_NAME: 'itket-analytics-data.json',
   BUDGET_MS: 4.5 * 60 * 1000,                // 한 번 실행에 쓸 최대 시간(6분 제한 대비)
   SCHEMA: 2,                                 // 수집 항목이 바뀌면 올린다 → 과거 월을 다시 채움
-  LIVE_CACHE_SEC: 90,                        // 실시간(접속자 수·지금 보는 페이지) 갱신 간격 — 실측 1회 갱신 146토큰 기준, 한도(14,000/시간)의 30% 안쪽
+  LIVE_CACHE_SEC: 30,                        // ① 접속자 수 갱신 간격(실측 34토큰/회) — 남은 한도가 충분할 때
   LIVE_COOLDOWN_SEC: 300,                    // 한도 오류 직후 API 재호출을 쉬는 시간
-  LIVE_SLOW_SEC: 300,                        // 분당 그래프·기기 구분은 5분마다만 (30분 구간 그래프라 천천히 바뀌어도 충분)
-  LIVE_BUDGET: [[9000, 90], [5000, 150], [2500, 300]],   // [남은 시간당 토큰이 이 값 초과, 캐시 초] — 남을수록 자주, 줄면 간격을 늘림
+  LIVE_MID_SEC: 180,                         // ② 지금 보는 페이지 + 분당 그래프(2회 약 70토큰) 기본 간격
+  LIVE_SLOW_SEC: 600,                        // ③ 기기 구분(1회) 기본 간격
+  LIVE_BUDGET: [[9000, 30], [6500, 60], [4000, 120], [2000, 300]],   // [남은 시간당 토큰이 이 값 초과, ①의 간격(초)] — ②③은 ①의 6배·20배 이상으로 함께 늘어남
   LIVE_BUDGET_MIN_TTL: 900,                  // 남은 토큰이 2,500 이하일 때
   SHOP_REFRESH_MIN: 120,                     // 인기 상품·카테고리·게시판(무거운 조회)은 이 간격으로만 새로 계산
 };
@@ -168,17 +169,27 @@ function collectAll() {
   } finally { lock.releaseLock(); }
 }
 
-/** 실시간(최근 30분) — GA4 Realtime API.
- *  ① 접속자 수 + 지금 보는 페이지: 90초마다 (화면에서 가장 중요한 두 가지)
- *  ② 분당 그래프 + 기기 구분: 5분마다 (30분 구간 그래프라 천천히 바뀌어도 충분)
- *  남은 토큰(시간당 14,000)에 따라 ①의 간격을 스스로 늘리고, 한도 오류가 나면 5분 쉬면서 마지막 성공 값을 stale 로 돌려준다. */
+/** 실시간(최근 30분) — GA4 Realtime API, 3단 갱신 (호출 1건 ≈ 34~55토큰, 시간당 한도 14,000)
+ *  ① 접속자 수 1회: 30초 — 화면에서 가장 중요한 숫자
+ *  ② 지금 보는 페이지 + 분당 그래프 2회: 3분
+ *  ③ 기기 구분 1회: 10분
+ *  남은 토큰이 줄면 ①②③ 간격을 함께 늘리고, 한도 오류가 나면 5분 쉬면서 마지막 성공 값을 stale 로 돌려준다. */
 function liveNow_() {
   const cache = CacheService.getScriptCache();
-  const hit = cache.get('live');
-  if (hit) return JSON.parse(hit);
   if (cache.get('liveCool')) return staleLive_('조회 한도 회복 대기 중');
+  const part = (k) => { const v = cache.get(k); return v ? JSON.parse(v) : null; };
+  let fast = part('liveFast'), mid = part('liveMid'), slow = part('liveSlow');
+  const assemble = (budget) => ({
+    at: fast.at,
+    activeUsers: fast.activeUsers,
+    pages: mid.pages, minutes: mid.minutes, devices: slow.devices,
+    partsAt: { mid: mid.at, slow: slow.at },
+    budget: budget,
+  });
+  const remPrev = part('liveRem');
+  if (fast && mid && slow) return assemble({ cost: 0, remaining: remPrev && remPrev.v, ttl: null, fresh: {} });   // 전부 캐시 — GA4 호출 없음
   try {
-    let cost = 0, remaining = null;
+    let cost = 0, remaining = remPrev ? remPrev.v : null;
     const call = (dims, metrics, extra) => {
       const resp = AnalyticsData.Properties.runRealtimeReport(Object.assign({
         dimensions: dims.map((name) => ({ name })),
@@ -190,27 +201,24 @@ function liveNow_() {
       if (q) { cost += q.consumed || 0; remaining = q.remaining; }
       return resp;
     };
-    const total = rows_(call([], ['activeUsers']))[0] || { activeUsers: 0 };
-    const pages = rows_(call(['unifiedScreenName'], ['activeUsers', 'screenPageViews'], { orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8 }));
-    let slow, slowFresh = false;
-    const sh = cache.get('liveSlow');
-    if (sh) slow = JSON.parse(sh);
-    else {
-      slow = {
+    const now = () => new Date().toISOString();
+    const fresh = {};
+    if (!fast) { const t = rows_(call([], ['activeUsers']))[0] || { activeUsers: 0 }; fast = { at: now(), activeUsers: t.activeUsers || 0 }; fresh.fast = true; }
+    if (!mid) {
+      mid = {
+        at: now(),
+        pages: rows_(call(['unifiedScreenName'], ['activeUsers', 'screenPageViews'], { orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }], limit: 8 })),
         minutes: rows_(call(['minutesAgo'], ['activeUsers'], { orderBys: [{ dimension: { dimensionName: 'minutesAgo' } }], limit: 31 })),
-        devices: rows_(call(['deviceCategory'], ['activeUsers'])),
       };
-      cache.put('liveSlow', JSON.stringify(slow), CFG.LIVE_SLOW_SEC);
-      slowFresh = true;
+      fresh.mid = true;
     }
+    if (!slow) { slow = { at: now(), devices: rows_(call(['deviceCategory'], ['activeUsers'])) }; fresh.slow = true; }
     const ttl = liveTtl_(remaining);
-    const out = {
-      at: new Date().toISOString(),
-      activeUsers: total.activeUsers || 0,
-      pages: pages, devices: slow.devices, minutes: slow.minutes,
-      budget: { cost: cost, remaining: remaining, ttl: ttl, slow: slowFresh },   // 이번 갱신에 쓴 토큰 / 남은 토큰 / 다음 갱신까지 대기(초) / 그래프·기기까지 새로 받았는지
-    };
-    cache.put('live', JSON.stringify(out), ttl);
+    if (fresh.fast) cache.put('liveFast', JSON.stringify(fast), ttl);
+    if (fresh.mid) cache.put('liveMid', JSON.stringify(mid), Math.min(21600, Math.max(CFG.LIVE_MID_SEC, ttl * 6)));
+    if (fresh.slow) cache.put('liveSlow', JSON.stringify(slow), Math.min(21600, Math.max(CFG.LIVE_SLOW_SEC, ttl * 20)));
+    if (remaining != null) cache.put('liveRem', JSON.stringify({ v: remaining }), 3600);
+    const out = assemble({ cost: cost, remaining: remaining, ttl: ttl, fresh: fresh });   // 이번 요청에 쓴 토큰 / 남은 토큰 / ①의 간격(초) / 새로 받은 단계
     cache.put('liveLast', JSON.stringify(out), 21600);
     return out;
   } catch (e) {
