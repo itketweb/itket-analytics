@@ -119,7 +119,7 @@ td .sh{display:block;height:3px;background:var(--bar2);border-radius:2px;margin-
   <div class="brand"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></i><span>아이티켓 애널리틱스</span></div>
   <div><div class="lbl" style="margin-bottom:6px">연도</div><div class="years" id="years"></div></div>
   <div><div class="lbl" style="margin-bottom:6px">기간</div><nav class="mons" id="mons"></nav></div>
-  <div class="sfoot">출처: Google Analytics 4<br>수집 15분 · 화면 2분 · 접속자 30초 간격 갱신</div>
+  <div class="sfoot">출처: Google Analytics 4<br>수집 15분 · 화면 2분 · 접속자 60초 간격 갱신</div>
 </aside>
 <div class="wrap">
   <header class="top">
@@ -404,7 +404,7 @@ function renderLive(l, err) {
   const pages = (l.pages || []).slice(0, 5).map((r) => `<li><span title="${esc(r.unifiedScreenName)}">${esc(r.unifiedScreenName || '(제목 없음)')}</span><span>${fmt(r.activeUsers)}명</span></li>`).join('') || '<li><span style="color:var(--sub)">지금 보는 페이지 없음</span></li>';
   const dev = (l.devices || []).map((r) => `${{ desktop: 'PC', mobile: '모바일', tablet: '태블릿' }[r.deviceCategory] || r.deviceCategory} ${fmt(r.activeUsers)}`).join(' · ');
   const ago = Math.max(0, Math.round((Date.now() - new Date(l.at)) / 1000));
-  box.innerHTML = `<div class="live"><div><div class="l"><span class="dot"></span>지금 접속 중 (최근 30분)</div><div class="n">${fmt(l.activeUsers)}명</div><div class="l">${dev || '&nbsp;'} · ${ago < 5 ? '방금' : ago + '초 전'} 갱신</div></div><div><div class="l" style="margin-bottom:2px">분당 접속자 (30분)</div>${spark}</div><div><div class="l" style="margin-bottom:2px">지금 보는 페이지</div><ul>${pages}</ul></div></div>`;
+  box.innerHTML = `<div class="live"><div><div class="l"><span class="dot${l.stale ? ' off' : ''}"></span>지금 접속 중 (최근 30분)</div><div class="n">${fmt(l.activeUsers)}명</div><div class="l">${dev || '&nbsp;'} · ${ago < 5 ? '방금' : ago < 90 ? ago + '초 전' : Math.round(ago / 60) + '분 전'} 갱신${l.stale ? ' · 조회 한도로 지연(최근 성공값)' : ''}</div></div><div><div class="l" style="margin-bottom:2px">분당 접속자 (30분)</div>${spark}</div><div><div class="l" style="margin-bottom:2px">지금 보는 페이지</div><ul>${pages}</ul></div></div>`;
 }
 async function pollLive() {
   if (!liveUrl || document.visibilityState === 'hidden') return;
@@ -431,7 +431,7 @@ async function pollCur() {
     return changed ? 'changed' : 'same';
   } catch (e) { return 'fail'; }
 }
-if (liveUrl) { renderLive(null); pollLive(); pollCur(); setInterval(pollLive, 30000); setInterval(pollCur, 120000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pollLive(); pollCur(); } }); }
+if (liveUrl) { renderLive(null); pollLive(); pollCur(); setInterval(pollLive, 60000); setInterval(pollCur, 120000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pollLive(); pollCur(); } }); }
 $('refresh').onclick = async () => {
   if (!liveUrl) { location.reload(); return; }
   const b = $('refresh'); b.disabled = true; b.classList.add('spin');
