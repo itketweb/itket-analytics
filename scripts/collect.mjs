@@ -74,6 +74,21 @@ function collectMock(m) {
   };
 }
 
+// 가장 간단한 경로: Apps Script 웹앱(apps-script/Code.gs)이 만들어 둔 JSON 을 받아 월별 파일로 저장한다.
+if (process.env.GA4_WEBAPP_URL) {
+  const res = await fetch(process.env.GA4_WEBAPP_URL.trim(), { redirect: 'follow' });
+  const text = await res.text();
+  let store;
+  try { store = JSON.parse(text); } catch { console.error(`웹앱 응답이 JSON 이 아닙니다 (HTTP ${res.status}). 웹앱 배포의 접근 권한이 "모든 사용자"인지 확인하세요.`); process.exit(1); }
+  const got = Object.keys(store.months || {}).sort();
+  if (!got.length) { console.error('웹앱에 아직 수집된 월이 없습니다. Apps Script 에서 collectAll 을 실행하세요.'); process.exit(1); }
+  for (const m of got) fs.writeFileSync(path.join(OUT, `${m}.json`), JSON.stringify(store.months[m]));
+  fs.writeFileSync(path.join(OUT, '_meta.json'), JSON.stringify({ updated: store.updated || new Date().toISOString(), failed: (store.errors || []).length }));
+  console.log(`웹앱에서 ${got.length}개월 받음 (수집기 갱신 ${store.updated || '알 수 없음'})`);
+  if ((store.errors || []).length) { console.error('수집기 오류:', store.errors.join(' / ')); process.exit(1); }
+  process.exit(0);
+}
+
 let ctx = null, failed = 0;
 if (process.env.GA4_MOCK !== '1') {
   const property = (process.env.GA4_PROPERTY_ID || '').trim();

@@ -31,6 +31,7 @@ jobs:
         id: collect
         continue-on-error: true
         env:
+          GA4_WEBAPP_URL: ${{ secrets.GA4_WEBAPP_URL }}
           GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
           GA4_SERVICE_ACCOUNT: ${{ secrets.GA4_SERVICE_ACCOUNT }}
         run: node scripts/collect.mjs
@@ -56,8 +57,8 @@ jobs:
               gh issue create --title "$title" --body "자동 수집이 실패했습니다. 대시보드는 마지막으로 성공한 데이터를 계속 보여 줍니다.
 
           원인 확인: [Actions 실행 기록](${{ github.server_url }}/${{ github.repository }}/actions/workflows/update.yml)
-          - 처음 설정이라면 README 의 '처음 한 번만' 을 끝냈는지 확인하세요 (Secret 2개).
-          - 서비스 계정이 GA4 속성에서 삭제되었거나 키가 폐기되면 실패합니다.
+          - 처음 설정이라면 README 의 '처음 한 번만' 을 끝냈는지 확인하세요 (Secret GA4_WEBAPP_URL 1개).
+          - Apps Script 쪽 실행 기록(script.google.com → 실행)에 오류가 없는지, 트리거가 살아 있는지 확인하세요.
 
           다음 실행에서 성공하면 이 이슈는 자동으로 닫힙니다."
             fi

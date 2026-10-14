@@ -2,20 +2,28 @@
 
 itket.com 의 GA4 데이터를 **자동으로 모아 보여주는 월별 대시보드**. 사람이 하는 일은 없다.
 
-- 3시간마다 GitHub Actions 가 GA4 에서 데이터를 받아 `data/ga4/YYYY-MM.json` 에 쌓고 `site/index.html` 을 다시 만든다.
+- 1시간마다 Apps Script(`apps-script/Code.gs`)가 GA4 에서 월별 데이터를 모으고, 3시간마다 GitHub Actions 가 그것을 받아 `data/ga4/YYYY-MM.json` 에 쌓고 `site/index.html` 을 다시 만들어 Pages 로 배포한다.
 - 화면: 연도 탭 → 월 탭(연간 요약 포함). 방문자·세션·페이지뷰·신규 방문자·회원가입·체류시간, 일별/월별 추이, 인기 페이지, 유입(매체·채널·UTM·기기), 전월·전년 대비.
 - 진행 중인 달은 "현재까지"로 표시되고 전월과는 같은 기간끼리 비교한다.
 - 서버·DB 없음. 수집이 실패하면 이 저장소에 이슈가 자동 등록되고(메일 알림), 화면은 마지막 성공 데이터를 계속 보여준다. 다시 성공하면 이슈가 자동으로 닫힌다.
 
 ## 처음 한 번만 (이후 영구 자동)
-1. **서비스 계정 만들기** — [Google Cloud Console](https://console.cloud.google.com/) → 프로젝트 생성(또는 기존 선택) → `API 및 서비스 → 라이브러리` 에서 **Google Analytics Data API** 사용 설정 → `IAM 및 관리자 → 서비스 계정` 에서 계정 생성 → 해당 계정의 `키 → 키 추가 → JSON` 으로 키 파일 받기.
-2. **GA4 에 권한 주기** — [GA4](https://analytics.google.com/) → 관리 → 속성 액세스 관리 → `+` → 서비스 계정 이메일(`...@...iam.gserviceaccount.com`) 을 **뷰어** 로 추가.
-3. **속성 ID 확인** — GA4 관리 → 속성 설정 → `속성 ID` (숫자. `G-` 로 시작하는 측정 ID 가 아님).
-4. **GitHub Secret 등록** — 이 저장소 Settings → Secrets and variables → Actions:
-   - `GA4_PROPERTY_ID` = 속성 ID 숫자
-   - `GA4_SERVICE_ACCOUNT` = 받은 JSON 키 파일의 **내용 전체**
-5. Actions → **Update Dashboard** → Run workflow. 첫 실행은 `config/ga4.json` 의 `startMonth` 부터 현재까지 한꺼번에 채운다.
-6. 끝. 대시보드는 **https://itketweb.github.io/itket-analytics/** 에서 본다 (갱신될 때마다 GitHub Pages 로 자동 배포).
+Google Cloud 콘솔·서비스 계정·JSON 키는 **필요 없다.** GA4 를 볼 수 있는 구글 계정 하나면 된다.
+
+1. **속성 ID 확인** — [GA4](https://analytics.google.com/) → 관리 → 속성 설정 → `속성 ID` (숫자. `G-` 로 시작하는 측정 ID 가 아님).
+2. **Apps Script 만들기** — GA4 를 볼 수 있는 구글 계정으로 [script.google.com](https://script.google.com/) → 새 프로젝트.
+   - `Code.gs` 내용을 지우고 이 저장소의 `apps-script/Code.gs` 전체를 붙여넣는다.
+   - 파일 맨 위 `PROPERTY_ID` 의 `'여기에_GA4_속성_ID_숫자'` 를 1번 숫자로 바꾼다.
+   - 왼쪽 `서비스 +` → **Google Analytics Data API** (식별자 `AnalyticsData`) 추가.
+3. **권한 승인 + 첫 수집** — 함수 선택에서 `collectAll` → 실행 → 권한 허용(GA4 읽기·드라이브 파일 1개). 한꺼번에 못 채우면 다음 실행에서 이어서 채운다.
+   (`API has not been used` 오류가 나면 오류 안의 링크를 눌러 한 번 "사용"만 누르면 된다.)
+4. **자동 실행 켜기** — 함수 `setupTrigger` 를 한 번 실행한다 (1시간마다 자동 수집).
+5. **웹앱으로 배포** — 오른쪽 위 `배포 → 새 배포 → 유형: 웹 앱` → 실행 계정 **나**, 액세스 권한 **모든 사용자** → 배포 → 나오는 **웹 앱 URL** 을 복사한다.
+6. **GitHub Secret 등록** — 이 저장소 Settings → Secrets and variables → Actions → New repository secret: 이름 `GA4_WEBAPP_URL`, 값 = 5번 URL.
+7. Actions → **Update Dashboard** → Run workflow. 이후 3시간마다 자동으로 받아 배포한다.
+8. 끝. 대시보드는 **https://itketweb.github.io/itket-analytics/** 에서 본다.
+
+> 서비스 계정 방식(`GA4_PROPERTY_ID` + `GA4_SERVICE_ACCOUNT` Secret)도 코드에 남아 있어 쓸 수 있지만, 위 방식이 더 간단해 기본으로 한다.
 
 ## 공개 범위
 - 저장소와 대시보드는 **공개**다 (팀 내부 편의용, 로그인 없음). URL 을 아는 사람은 누구나 방문자·인기 페이지·유입·UTM 캠페인명 집계를 볼 수 있다. 페이지에는 검색 제외(noindex)가 걸려 있다.
@@ -27,8 +35,9 @@ itket.com 의 GA4 데이터를 **자동으로 모아 보여주는 월별 대시�
 | 경로 | 역할 |
 |---|---|
 | `config/ga4.json` | 시작 월, 제목, 회원가입 이벤트명 등 |
-| `scripts/ga4.mjs` | GA4 Data API 클라이언트(의존성 없음) |
-| `scripts/collect.mjs` | 월별 수집 (당월·전월은 항상 갱신, 빠진 과거 월은 채움) |
+| `apps-script/Code.gs` | Google Apps Script 수집기 (GA4 → 월별 JSON, 웹앱으로 제공, 1시간마다 실행) |
+| `scripts/collect.mjs` | 웹앱 JSON 을 받아 월별 파일로 저장 (대체 경로: 서비스 계정으로 GA4 직접 수집) |
+| `scripts/ga4.mjs` | 서비스 계정 방식용 GA4 Data API 클라이언트(의존성 없음) |
 | `scripts/build-site.mjs`, `scripts/site-template.html` | 대시보드 생성 |
 | `.github/workflows/update.yml` | 3시간마다 수집→생성→커밋, 실패 시 이슈 |
 | `data/ga4/*.json` | 월별 원본 데이터(이력) |
