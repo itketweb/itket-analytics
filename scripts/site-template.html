@@ -155,7 +155,16 @@ if (!sel || (!D.months[sel] && !years.includes(sel))) sel = keys[keys.length - 1
 let chartMetric = 'activeUsers', srcTab = 'sourceMedium', annMetric = 'sessions', shopTab = 'goods';
 
 const signups = (m) => (m.signups || []).reduce((a, r) => a + r.count, 0);
-const metricOf = (m, k) => k === 'signups' ? signups(m) : m.total[k];
+// 방문자는 고도몰 통계와 같은 방식(일별 방문자의 합)으로 센다. GA4 의 월 중복 제거 값은 m.total.activeUsers(순 방문자).
+const dailySum = (m, k) => m.daily.reduce((a, r) => a + (r[k] || 0), 0);
+const metricOf = (m, k) => k === 'signups' ? signups(m) : k === 'activeUsers' ? dailySum(m, 'activeUsers') : m.total[k];
+// 방문자 1명당 조회수가 비정상적으로 높은 페이지(내부 새로고침·자동 접속 의심). 정상 페이지는 1.5~4.6, 의심 페이지는 19~68 (2026-09 실측)
+const SUSP_MIN_PV = 500, SUSP_RATIO = 10, NORMAL_RATIO = 2;
+const suspOf = (m) => {
+  const list = (m.pages || []).filter((p) => p.screenPageViews > SUSP_MIN_PV && p.screenPageViews / Math.max(1, p.activeUsers) > SUSP_RATIO);
+  const excess = list.reduce((a, p) => a + p.screenPageViews - p.activeUsers * NORMAL_RATIO, 0);   // 정상 수준(방문자당 2뷰)을 넘는 분량
+  return { list, excess };
+};
 const sumDays = (m, k, n) => k === 'signups' ? (m.signups || []).filter((r) => +r.date.slice(8) <= n).reduce((a, r) => a + r.count, 0) : m.daily.filter((r) => +r.date.slice(8) <= n).reduce((a, r) => a + r[k], 0);
 const prevKey = (k) => { const [y, mo] = k.split('-').map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`; };
 const yoyKey = (k) => `${+k.slice(0, 4) - 1}-${k.slice(5)}`;
@@ -276,12 +285,15 @@ const seg = (items, cur, attr) => `<span class="seg">${items.map(([k, l]) => `<b
 function renderMonth(k) {
   const m = D.months[k], prev = okM(prevKey(k)), yoy = okM(yoyKey(k));
   const n = m.partial ? m.daily.length : null; // 진행 중인 달은 전월 같은 기간과 비교
-  const cards = [['방문자', 'activeUsers'], ['신규 방문자', 'newUsers'], ['세션', 'sessions'], ['페이지뷰', 'screenPageViews'], ['회원가입', 'signups']].map(([l, key]) => {
+  const cards = [['방문자 (일별 합)', 'activeUsers'], ['신규 방문자', 'newUsers'], ['세션', 'sessions'], ['페이지뷰', 'screenPageViews'], ['회원가입', 'signups']].map(([l, key]) => {
     const cur = metricOf(m, key);
     let d = '';
-    if (n) { if (prev && key !== 'activeUsers') d = dl(cur, sumDays(prev, key, n), '전월 동기간'); }
+    if (n) { if (prev) d = dl(cur, sumDays(prev, key, n), '전월 동기간'); }
     else { d = dl(cur, prev && metricOf(prev, key), '전월') + dl(cur, yoy && metricOf(yoy, key), '전년'); }
-    return `<div class="kpi"><div class="l">${l}</div><div class="v">${fmt(cur)}</div>${d}</div>`;
+    let sub = '';
+    if (key === 'activeUsers') sub = `<div class="l" style="margin-top:2px" title="한 달 동안 같은 사람을 한 번만 센 값(GA4 기본 방식)입니다. 위 값은 고도몰 통계와 같이 '날마다 온 사람'을 더한 값입니다.">순 방문자(월 중복 제거) ${fmt(m.total.activeUsers)}</div>`;
+    if (key === 'screenPageViews') { const x = suspOf(m); if (x.excess > 0) sub = `<div class="l" style="margin-top:2px;color:var(--warn)" title="방문자 1명당 조회수가 ${SUSP_RATIO}배를 넘는 페이지의 초과분(내부 새로고침 의심)을 뺀 추정값입니다. 고도몰 통계와 비교할 때 참고하세요.">⚠ 내부 새로고침 의심분 제외 ≈ ${fmt(cur - x.excess)}</div>`; }
+    return `<div class="kpi"><div class="l">${l}</div><div class="v">${fmt(cur)}</div>${d}${sub}</div>`;
   });
   const avg = m.total.activeUsers ? m.total.userEngagementDuration / m.total.activeUsers : 0;
   const pa = prev && prev.total.activeUsers ? prev.total.userEngagementDuration / prev.total.activeUsers : null;
@@ -299,9 +311,9 @@ function renderMonth(k) {
   const stable = srows.length ? `<table><thead><tr><th>${src[0]}</th><th class="n">${src[4][0]}</th><th class="n">${src[5][0]}</th></tr></thead><tbody>${srows.map((r) => `<tr><td><span class="tx" title="${esc(r[src[2]])}">${esc(r[src[2]])}${srcTab === 'utm' ? ` <span style="color:var(--sub)">· ${esc(r.sessionSourceMedium)}</span>` : ''}</span><span class="sh" style="width:${Math.max(2, r[src[3]] / stot * 100)}%"></span></td><td class="n">${fmt(r[src[4][1]])}</td><td class="n">${fmt(r[src[5][1]])}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음 (UTM이 붙은 유입이 없으면 비어 있습니다)</div>';
   const pmax = Math.max(1, ...m.pages.map((p) => p.screenPageViews));
   // 방문자 1명당 조회수가 비정상적으로 높은 페이지(내부 새로고침·자동 접속 의심)는 표시하고, 고도몰 통계와 어긋나는 원인으로 알려 준다
-  const susp = (p) => p.screenPageViews > 1000 && p.screenPageViews / Math.max(1, p.activeUsers) > 40;
-  const suspPv = m.pages.filter(susp).reduce((a, p) => a + p.screenPageViews, 0);
-  const suspNote = suspPv ? `<div class="note" style="margin:10px 0 0">⚠ 표시된 페이지는 방문자 1명당 조회수가 매우 높아(40배 초과) 내부 새로고침·자동 접속일 수 있습니다. 합계 ${fmt(suspPv)}뷰(이 달 전체 페이지뷰의 ${(suspPv / Math.max(1, m.total.screenPageViews) * 100).toFixed(0)}%) — 고도몰 통계는 이런 조회를 제외하는 것으로 보여 이 부분에서 두 통계가 크게 벌어집니다.</div>` : '';
+  const sp = suspOf(m);
+  const susp = (p) => sp.list.includes(p);
+  const suspNote = sp.list.length ? `<div class="note" style="margin:10px 0 0">⚠ 표시된 페이지는 방문자 1명당 조회수가 ${SUSP_RATIO}배를 넘어 내부 새로고침·자동 접속일 수 있습니다. 초과분 약 ${fmt(sp.excess)}뷰(이 달 전체 페이지뷰의 ${(sp.excess / Math.max(1, m.total.screenPageViews) * 100).toFixed(0)}%)를 빼면 고도몰 통계와 거의 같아집니다. 고도몰은 이런 조회를 제외하는 것으로 보입니다.</div>` : '';
   const ptable = m.pages.length ? `<table><thead><tr><th>페이지</th><th class="n">조회수</th><th class="n">방문자</th><th class="n">체류</th></tr></thead><tbody>${m.pages.slice(0, 15).map((p) => `<tr><td><span class="tx" title="${esc(p.pagePath)}">${susp(p) ? '<span class="flag" title="방문자 대비 조회수 과다">⚠</span> ' : ''}${esc(p.pagePath)}</span><span class="sh" style="width:${Math.max(2, p.screenPageViews / pmax * 100)}%"></span></td><td class="n">${fmt(p.screenPageViews)}</td><td class="n">${fmt(p.activeUsers)}</td><td class="n">${dur(p.activeUsers ? p.userEngagementDuration / p.activeUsers : 0)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
   $('main').innerHTML = `
     ${m.partial ? `<div class="note">진행 중인 달입니다 (${m.daily.length}일차까지 집계). 전월 대비는 같은 기간끼리 비교합니다.</div>` : ''}
@@ -311,7 +323,8 @@ function renderMonth(k) {
       <div class="card"><h2>인기 페이지</h2><div class="tw">${ptable}</div>${suspNote}</div>
       <div class="card"><h2>유입 ${seg([['sourceMedium', '매체'], ['channel', '채널'], ['utm', 'UTM'], ['device', '기기']], srcTab, 'st')}</h2><div class="tw">${stable}</div></div>
     </div>
-    ${shopCard(m)}`;
+    ${shopCard(m)}
+    ${whyCard()}`;
   bindDaily();
   document.querySelectorAll('[data-sh]').forEach((b) => b.onclick = () => { shopTab = b.dataset.sh; render(); });
   document.querySelectorAll('[data-cm]').forEach((b) => b.onclick = () => { chartMetric = b.dataset.cm; render(); });
@@ -319,6 +332,27 @@ function renderMonth(k) {
 }
 const GENERIC = /^아이티켓 - /;
 const nm = (r) => (D.names && D.names[shopTab] && D.names[shopTab][r.id]) || (r.title && !GENERIC.test(r.title) ? r.title : '#' + r.id + ' (이름 확인 중)');
+function whyCard() {
+  const st = 'margin:6px 0 0;padding-left:18px;line-height:1.7';
+  return `<details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">고도몰 통계와 수치가 다른 이유 · 읽는 법</summary>
+    <div style="margin-top:10px;font-size:13.5px">
+      <p style="margin:0">이 화면은 <b>Google Analytics 4(GA4)</b> 기준입니다. 고도몰 <b>통계 → 애널리틱스</b>는 NHN커머스가 따로 집계하므로 같은 사이트라도 숫자가 조금 다릅니다. 2026년 8~10월을 직접 대조한 결과입니다.</p>
+      <div class="tw" style="margin-top:8px"><table><thead><tr><th>항목</th><th class="n">GA4 ÷ 고도몰</th><th>해석</th></tr></thead><tbody>
+        <tr><td>방문 횟수(세션)</td><td class="n">0.99 ~ 1.07</td><td>거의 같음</td></tr>
+        <tr><td>방문자 (일별 합)</td><td class="n">0.85 ~ 0.90</td><td>GA4가 10~15% 적음</td></tr>
+        <tr><td>페이지뷰 (의심분 제외)</td><td class="n">약 0.97</td><td>거의 같음 (9월 기준)</td></tr>
+        <tr><td>인기 상품·카테고리·게시판</td><td class="n">순위 거의 동일</td><td>조회수 ±5~20%</td></tr>
+      </tbody></table></div>
+      <p style="margin:10px 0 0"><b>오차가 생기는 이유</b></p>
+      <ol style="${st}">
+        <li><b>방문자를 세는 방식</b> — 고도몰은 날마다 온 방문자를 더합니다. GA4 기본값은 한 달 동안 같은 사람을 한 번만 셉니다. 이 화면은 고도몰 방식(일별 합)으로 맞췄고, 중복을 뺀 <i>순 방문자</i>는 카드 아래에 따로 보여 줍니다. (이것만으로 격차가 16~19% → 10~15%로 줄었습니다.)</li>
+        <li><b>측정 도구의 차이</b> — GA4는 방문자 브라우저가 구글 측정 코드를 보내야 기록됩니다. 광고 차단·보안 프로그램·개인정보 보호 브라우저가 막으면 빠지고, 알려진 봇은 자동으로 제외됩니다. 고도몰은 자체 방식이라 접속이 적은 날 더 많이 셉니다(추정, 아직 검증하지 못했습니다). 이 부분은 보정할 수 없습니다.</li>
+        <li><b>내부 새로고침</b> — 견적 목록·견적 상세처럼 직원이 화면을 열어 두고 새로고침하면 페이지뷰이 크게 늘어납니다. 고도몰은 이를 제외하는 것으로 보입니다. 이 화면은 해당 페이지에 ⚠를 표시하고, 페이지뷰 카드에 <i>의심분을 뺀 값</i>을 함께 보여 줍니다.</li>
+        <li><b>집계 시차</b> — GA4 표준 보고서는 처리 지연이 있어 최근 몇 시간 값이 나중에 조금 바뀔 수 있습니다. 고도몰도 당일은 집계 중입니다. 접속자(실시간 패널)만 진짜 실시간입니다.</li>
+      </ol>
+      <p style="margin:10px 0 0;color:var(--sub)">추세와 순위는 두 통계가 같은 방향을 가리킵니다. 절대 숫자를 두 통계에서 맞대어 볼 때만 위 오차를 감안하세요.</p>
+    </div></details>`;
+}
 function shopCard(m) {
   const tabs = [['goods', '인기 상품'], ['categories', '인기 카테고리'], ['boards', '인기 게시판']];
   const list = m[shopTab];
@@ -343,8 +377,8 @@ function renderYear(y) {
   const rowsHtml = ks.map((k, i) => { const m = okM(k); const gap = isGap(D.months[k]); return `<tr class="${m ? 'link' : ''}" data-s="${m ? k : ''}"><td>${i + 1}월${m && m.partial ? ' <span style="color:var(--sub)">(진행 중)</span>' : ''}</td>${gap ? '<td class="n" colspan="5" style="color:var(--warn)">집계 없음 — 방문 기록 거의 없음 (사이트 미운영 구간 추정)</td>' : m ? ['activeUsers', 'sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n">${fmt(metricOf(m, key))}</td>`).join('') : '<td class="n" colspan="5" style="color:var(--sub)">―</td>'}</tr>`; }).join('');
   $('main').innerHTML = `
     <div class="kpis">${cards.join('')}</div>
-    <div class="card"><h2>월별 추이 ${seg(METRICS, annMetric, 'am')}</h2>${monthlyChart(vals, ks.map((k) => !!okM(k)), ks.map((k) => !!(D.months[k] && D.months[k].partial)), annMetric === 'signups' ? '건' : '', annMetric !== 'activeUsers')}</div>
-    <div class="card"><h2>월별 요약 <span style="color:var(--sub);font-size:12px;font-weight:400">행을 누르면 해당 월로 이동 · 방문자는 월별 값(중복 포함)이라 합계를 내지 않습니다</span></h2><div class="tw"><table><thead><tr><th>월</th><th class="n">방문자</th><th class="n">세션</th><th class="n">페이지뷰</th><th class="n">신규 방문자</th><th class="n">회원가입</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr><td><b>합계</b></td><td class="n">―</td>${['sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n"><b>${fmt(sum(key))}</b></td>`).join('')}</tr></tfoot></table></div></div>`;
+    <div class="card"><h2>월별 추이 ${seg(METRICS, annMetric, 'am')}</h2>${monthlyChart(vals, ks.map((k) => !!okM(k)), ks.map((k) => !!(D.months[k] && D.months[k].partial)), annMetric === 'signups' ? '건' : '', true)}</div>
+    <div class="card"><h2>월별 요약 <span style="color:var(--sub);font-size:12px;font-weight:400">행을 누르면 해당 월로 이동 · 방문자는 일별 방문자의 합(고도몰 통계와 같은 방식)입니다</span></h2><div class="tw"><table><thead><tr><th>월</th><th class="n">방문자(일 합)</th><th class="n">세션</th><th class="n">페이지뷰</th><th class="n">신규 방문자</th><th class="n">회원가입</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr><td><b>합계</b></td><td class="n"><b>${fmt(sum('activeUsers'))}</b></td>${['sessions', 'screenPageViews', 'newUsers', 'signups'].map((key) => `<td class="n"><b>${fmt(sum(key))}</b></td>`).join('')}</tr></tfoot></table></div></div>`;
   bindDaily();
   document.querySelectorAll('[data-am]').forEach((b) => b.onclick = () => { annMetric = b.dataset.am; render(); });
   document.querySelectorAll('tr.link').forEach((r) => r.onclick = () => go(r.dataset.s));
