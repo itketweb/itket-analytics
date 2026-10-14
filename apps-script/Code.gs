@@ -198,3 +198,22 @@ function setupTrigger() {
   ScriptApp.newTrigger('collectRecent').timeBased().everyMinutes(15).create();
   ScriptApp.newTrigger('collectAll').timeBased().everyHours(3).create();
 }
+
+/**
+ * 진단용(에디터에서 직접 실행): 특정 페이지의 조회수가 어디서 오는지 출처·국가·기기·날짜별로 로그에 찍는다.
+ * 고도몰 통계와 GA4 수치가 크게 다를 때 원인 파악에 쓴다. DIAG 만 바꿔 실행.
+ */
+function diagnose() {
+  const DIAG = { path: '/dbk/dbk_estimate_list.php', month: '2026-09' };
+  const range = { startDate: DIAG.month + '-01', endDate: lastDay_(DIAG.month) };
+  const filter = { filter: { fieldName: 'pagePath', stringFilter: { matchType: 'EXACT', value: DIAG.path } } };
+  const out = ['== ' + DIAG.path + ' (' + DIAG.month + ')'];
+  [['sessionSourceMedium', '출처/매체'], ['country', '국가'], ['deviceCategory', '기기'], ['date', '날짜'], ['browser', '브라우저'], ['pagePathPlusQueryString', 'URL(쿼리 포함)']].forEach((d) => {
+    const rows = q_([d[0]], ['screenPageViews', 'activeUsers', 'sessions'], range, {
+      dimensionFilter: filter, orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }], limit: 6,
+    });
+    out.push('-- ' + d[1]);
+    rows.forEach((r) => out.push('   ' + String(r[d[0]]).slice(0, 70) + ' | PV ' + r.screenPageViews + ' | 방문자 ' + r.activeUsers + ' | 세션 ' + r.sessions));
+  });
+  Logger.log(out.join('\n'));
+}
