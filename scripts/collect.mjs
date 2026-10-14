@@ -71,6 +71,9 @@ function collectMock(m) {
     campaigns: [{ sessionCampaignName: 'brand_search', sessionSourceMedium: 'naver / cpc', sessions: Math.round(total.sessions / 7), activeUsers: Math.round(total.activeUsers / 8) }],
     devices: [['desktop', 1.6], ['mobile', 2.2], ['tablet', 14]].map(([n, d]) => ({ deviceCategory: n, activeUsers: Math.round(total.activeUsers / d), sessions: Math.round(total.sessions / d) })),
     signups: daily.filter((_, i) => i % 3 === 0).map((r) => ({ date: r.date, count: 1 + Math.round(rnd() * 3) })),
+    goods: [['11166', 'Huawei FusionCube 1000'], ['11003', 'HP 255R G10'], ['11012', 'HP ZGX Nano G1n']].map(([id, title], i) => ({ id, title, views: Math.round(total.screenPageViews / (i + 30)) })),
+    categories: [['038006003', 'HUAWEI 스토리지'], ['021001', 'HPE ProLiant 서버']].map(([id, title], i) => ({ id, title, views: Math.round(total.screenPageViews / (i + 12)) })),
+    boards: [['Constructioncase', '구축사례'], ['docuread', '자료실']].map(([id, title], i) => ({ id, title, views: Math.round(total.screenPageViews / (i + 40)) })),
   };
 }
 

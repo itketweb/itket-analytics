@@ -1,0 +1,246 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e3]:
+    - generic [ref=f1e4]:
+      - heading "아이티켓 애널리틱스" [level=1] [ref=f1e5]
+      - generic [ref=f1e6]: 마지막 갱신 10. 14. 13:03 (방금)
+      - button "업데이트" [ref=f1e7] [cursor=pointer]
+      - switch "다크 모드" [ref=f1e12] [cursor=pointer]:
+        - generic [ref=f1e13]: ☀
+        - generic [ref=f1e14]: ☾
+      - button "인쇄/PDF" [ref=f1e16] [cursor=pointer]
+    - generic [ref=f1e22]:
+      - button "2025년" [ref=f1e23] [cursor=pointer]
+      - button "2026년" [ref=f1e24] [cursor=pointer]
+    - generic [ref=f1e25]:
+      - button "연간" [ref=f1e26] [cursor=pointer]
+      - button "1월" [ref=f1e27] [cursor=pointer]
+      - button "2월" [ref=f1e28] [cursor=pointer]
+      - button "3월" [ref=f1e29] [cursor=pointer]
+      - button "4월" [ref=f1e30] [cursor=pointer]
+      - button "5월" [ref=f1e31] [cursor=pointer]
+      - button "6월" [ref=f1e32] [cursor=pointer]
+      - button "7월" [ref=f1e33] [cursor=pointer]
+      - button "8월" [ref=f1e34] [cursor=pointer]
+      - button "9월" [ref=f1e35] [cursor=pointer]
+      - button "10월" [ref=f1e36] [cursor=pointer]
+      - button "11월" [disabled] [ref=f1e37]
+      - button "12월" [disabled] [ref=f1e38]
+  - main [ref=f1e40]:
+    - generic [ref=f1e41]: 진행 중인 달입니다 (14일차까지 집계). 전월 대비는 같은 기간끼리 비교합니다.
+    - generic [ref=f1e42]:
+      - generic [ref=f1e43]:
+        - generic [ref=f1e44]: 방문자
+        - generic [ref=f1e45]: 6,148
+      - generic [ref=f1e46]:
+        - generic [ref=f1e47]: 신규 방문자
+        - generic [ref=f1e48]: 5,757
+        - generic [ref=f1e49]: ▼ 30.0% 전월 동기간
+      - generic [ref=f1e50]:
+        - generic [ref=f1e51]: 세션
+        - generic [ref=f1e52]: 8,128
+        - generic [ref=f1e53]: ▼ 28.7% 전월 동기간
+      - generic [ref=f1e54]:
+        - generic [ref=f1e55]: 페이지뷰
+        - generic [ref=f1e56]: 22,776
+        - generic [ref=f1e57]: ▼ 49.9% 전월 동기간
+      - generic [ref=f1e58]:
+        - generic [ref=f1e59]: 회원가입
+        - generic [ref=f1e60]: "0"
+      - generic [ref=f1e61]:
+        - generic [ref=f1e62]: 방문자당 체류시간
+        - generic [ref=f1e63]: 42초
+    - generic [ref=f1e64]:
+      - heading [level=2] [ref=f1e65]:
+        - text: 일별 추이
+        - generic [ref=f1e66]:
+          - button "방문자" [ref=f1e67] [cursor=pointer]
+          - button "세션" [ref=f1e68] [cursor=pointer]
+          - button "페이지뷰" [ref=f1e69] [cursor=pointer]
+          - button "신규 방문자" [ref=f1e70] [cursor=pointer]
+          - button "회원가입" [ref=f1e71] [cursor=pointer]
+      - img [ref=f1e72]:
+        - generic [ref=f1e73]: "0"
+        - generic [ref=f1e74]: "667"
+        - generic [ref=f1e75]: 1,333
+        - generic [ref=f1e76]: 2,000
+        - 'generic "1일: 959" [ref=f1e77]'
+        - generic [ref=f1e78]: 1일
+        - 'generic "2일: 935" [ref=f1e79]'
+        - generic [ref=f1e80]: 2일
+        - 'generic "3일: 51" [ref=f1e81]'
+        - generic [ref=f1e82]: 3일
+        - 'generic "4일: 31" [ref=f1e83]'
+        - generic [ref=f1e84]: 4일
+        - 'generic "5일: 735" [ref=f1e85]'
+        - generic [ref=f1e86]: 5일
+        - 'generic "6일: 1,044" [ref=f1e87]'
+        - generic [ref=f1e88]: 6일
+        - 'generic "7일: 536" [ref=f1e89]'
+        - generic [ref=f1e90]: 7일
+        - 'generic "8일: 630" [ref=f1e91]'
+        - generic [ref=f1e92]: 8일
+        - 'generic "9일: 76" [ref=f1e93]'
+        - generic [ref=f1e94]: 9일
+        - 'generic "10일: 58" [ref=f1e95]'
+        - generic [ref=f1e96]: 10일
+        - 'generic "11일: 37" [ref=f1e97]'
+        - generic [ref=f1e98]: 11일
+        - 'generic "12일: 548" [ref=f1e99]'
+        - generic [ref=f1e100]: 12일
+        - 'generic "13일: 780" [ref=f1e101]'
+        - generic [ref=f1e102]: 13일
+        - 'generic "14일: 17" [ref=f1e103]'
+        - generic [ref=f1e104]: 14일
+    - generic [ref=f1e105]:
+      - generic [ref=f1e106]:
+        - heading "인기 페이지" [level=2] [ref=f1e107]
+        - table [ref=f1e109]:
+          - rowgroup [ref=f1e110]:
+            - row [ref=f1e111]:
+              - columnheader "페이지" [ref=f1e112]
+              - columnheader "조회수" [ref=f1e113]
+              - columnheader "방문자" [ref=f1e114]
+              - columnheader "체류" [ref=f1e115]
+          - rowgroup [ref=f1e116]:
+            - row [ref=f1e117]:
+              - cell "/dbk/dbk_estimate_list.php" [ref=f1e118]
+              - cell "7,737" [ref=f1e121]
+              - cell "233" [ref=f1e122]
+              - cell "3분 46초" [ref=f1e123]
+            - row [ref=f1e124]:
+              - cell "/goods/goods_list.php" [ref=f1e125]
+              - cell "6,347" [ref=f1e128]
+              - cell "3,373" [ref=f1e129]
+              - cell "21초" [ref=f1e130]
+            - row [ref=f1e131]:
+              - cell "/goods/goods_view.php" [ref=f1e132]
+              - cell "1,085" [ref=f1e135]
+              - cell "685" [ref=f1e136]
+              - cell "54초" [ref=f1e137]
+            - row [ref=f1e138]:
+              - cell "/board/list.php" [ref=f1e139]
+              - cell "852" [ref=f1e142]
+              - cell "399" [ref=f1e143]
+              - cell "11초" [ref=f1e144]
+            - row [ref=f1e145]:
+              - cell "/dbk/dbk_estimate_view.php" [ref=f1e146]
+              - cell "748" [ref=f1e149]
+              - cell "48" [ref=f1e150]
+              - cell "5분 16초" [ref=f1e151]
+            - row [ref=f1e152]:
+              - cell "/" [ref=f1e153]
+              - cell "677" [ref=f1e156]
+              - cell "360" [ref=f1e157]
+              - cell "15초" [ref=f1e158]
+            - row [ref=f1e159]:
+              - cell "/board/view.php" [ref=f1e160]
+              - cell "486" [ref=f1e163]
+              - cell "239" [ref=f1e164]
+              - cell "20초" [ref=f1e165]
+            - row [ref=f1e166]:
+              - cell "/huawei/huawei_intro.php" [ref=f1e167]
+              - cell "447" [ref=f1e170]
+              - cell "280" [ref=f1e171]
+              - cell "2초" [ref=f1e172]
+            - row [ref=f1e173]:
+              - cell "/connexion/connexion_intro.php" [ref=f1e174]
+              - cell "370" [ref=f1e177]
+              - cell "244" [ref=f1e178]
+              - cell "12초" [ref=f1e179]
+            - row [ref=f1e180]:
+              - cell "/gpu/gpu_main_intro.php" [ref=f1e181]
+              - cell "358" [ref=f1e184]
+              - cell "294" [ref=f1e185]
+              - cell "26초" [ref=f1e186]
+            - row [ref=f1e187]:
+              - cell "/main/index.php" [ref=f1e188]
+              - cell "357" [ref=f1e191]
+              - cell "132" [ref=f1e192]
+              - cell "34초" [ref=f1e193]
+            - row [ref=f1e194]:
+              - cell "/dbk/dbk_estimate_form.php" [ref=f1e195]
+              - cell "332" [ref=f1e198]
+              - cell "154" [ref=f1e199]
+              - cell "1분 20초" [ref=f1e200]
+            - row [ref=f1e201]:
+              - cell "/maint/maint_intro.php" [ref=f1e202]
+              - cell "253" [ref=f1e205]
+              - cell "198" [ref=f1e206]
+              - cell "21초" [ref=f1e207]
+            - row [ref=f1e208]:
+              - cell "/rs/rs_intro.php" [ref=f1e209]
+              - cell "252" [ref=f1e212]
+              - cell "206" [ref=f1e213]
+              - cell "10초" [ref=f1e214]
+            - row [ref=f1e215]:
+              - cell "/ws/ws_intro.php" [ref=f1e216]
+              - cell "221" [ref=f1e219]
+              - cell "165" [ref=f1e220]
+              - cell "17초" [ref=f1e221]
+      - generic [ref=f1e222]:
+        - heading [level=2] [ref=f1e223]:
+          - text: 유입
+          - generic [ref=f1e224]:
+            - button "매체" [ref=f1e225] [cursor=pointer]
+            - button "채널" [ref=f1e226] [cursor=pointer]
+            - button "UTM" [ref=f1e227] [cursor=pointer]
+            - button "기기" [ref=f1e228] [cursor=pointer]
+        - table [ref=f1e230]:
+          - rowgroup [ref=f1e231]:
+            - row [ref=f1e232]:
+              - columnheader "유입 매체" [ref=f1e233]
+              - columnheader "세션" [ref=f1e234]
+              - columnheader "방문자" [ref=f1e235]
+          - rowgroup [ref=f1e236]:
+            - row [ref=f1e237]:
+              - cell "google / cpc" [ref=f1e238]
+              - cell "5,483" [ref=f1e241]
+              - cell "4,443" [ref=f1e242]
+            - row [ref=f1e243]:
+              - cell "(direct) / (none)" [ref=f1e244]
+              - cell "978" [ref=f1e247]
+              - cell "695" [ref=f1e248]
+            - row [ref=f1e249]:
+              - cell "google / organic" [ref=f1e250]
+              - cell "409" [ref=f1e253]
+              - cell "232" [ref=f1e254]
+            - row [ref=f1e255]:
+              - cell "naver / organic" [ref=f1e256]
+              - cell "392" [ref=f1e259]
+              - cell "240" [ref=f1e260]
+            - row [ref=f1e261]:
+              - cell "m.search.naver.com / referral" [ref=f1e262]
+              - cell "189" [ref=f1e265]
+              - cell "179" [ref=f1e266]
+            - row [ref=f1e267]:
+              - cell "(data not available)" [ref=f1e268]
+              - cell "106" [ref=f1e271]
+              - cell "99" [ref=f1e272]
+            - row [ref=f1e273]:
+              - cell "zbyhp.co.kr / referral" [ref=f1e274]
+              - cell "86" [ref=f1e277]
+              - cell "46" [ref=f1e278]
+            - row [ref=f1e279]:
+              - cell "itketweb.cafe24.com / referral" [ref=f1e280]
+              - cell "69" [ref=f1e283]
+              - cell "8" [ref=f1e284]
+            - row [ref=f1e285]:
+              - cell "chatgpt.com / ai-assistant" [ref=f1e286]
+              - cell "52" [ref=f1e289]
+              - cell "31" [ref=f1e290]
+            - row [ref=f1e291]:
+              - cell "blog.naverblogwidget.com / referral" [ref=f1e292]
+              - cell "40" [ref=f1e295]
+              - cell "5" [ref=f1e296]
+            - row [ref=f1e297]:
+              - cell "bing / organic" [ref=f1e298]
+              - cell "35" [ref=f1e301]
+              - cell "27" [ref=f1e302]
+            - row [ref=f1e303]:
+              - cell "(not set)" [ref=f1e304]
+              - cell "32" [ref=f1e307]
+              - cell "31" [ref=f1e308]
+    - generic [ref=f1e309]:
+      - heading "고도몰 인기 항목" [level=2] [ref=f1e310]
+      - generic [ref=f1e311]: 이 달은 아직 집계 전입니다. 수집기가 과거 월을 순서대로 채우는 중이면 잠시 후 나타납니다.
+  - generic [ref=f1e312]: "출처: Google Analytics 4 · 수집 15분마다 · 화면 2분마다 갱신 · 접속자 30초마다 · 고도몰 애널리틱스와 수치 정의가 달라 값이 다를 수 있습니다."

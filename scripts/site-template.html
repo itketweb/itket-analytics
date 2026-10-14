@@ -17,6 +17,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Pretendard",
 .bar1 h1{font-size:17px;margin:0;flex:1;min-width:180px}
 .upd{color:var(--sub);font-size:12.5px}.upd.stale{color:var(--warn);font-weight:600}
 .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
+.btn.ic{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.btn.ic svg{width:15px;height:15px;flex:none}.btn.ic:disabled{opacity:.6;cursor:wait}.btn.ic.spin svg{animation:rot .8s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
+.tgl{position:relative;width:52px;height:28px;border:1px solid var(--line);border-radius:14px;background:var(--bg);cursor:pointer;padding:0;display:inline-flex;align-items:center;justify-content:space-between;font-size:13px;line-height:1}
+.tgl .k{width:26px;text-align:center;z-index:1;color:var(--sub)}.tgl i{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:var(--acc);opacity:.35;transition:transform .2s}
+.tgl[aria-checked=true] i{transform:translateX(24px)}
 .years{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow:auto}
 .y{padding:8px 16px;border:0;background:none;color:var(--sub);font:inherit;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
 .y.on{color:var(--acc);border-color:var(--acc)}
@@ -53,19 +57,31 @@ td .tx{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 td .sh{display:block;height:3px;background:var(--bar2);border-radius:2px;margin-top:3px}
 .tw{overflow:auto}
 .empty{color:var(--sub);padding:28px;text-align:center}
+.live{display:grid;grid-template-columns:200px 1fr 1fr;gap:16px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.live .n{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.live .l{color:var(--sub);font-size:12.5px}
+.live .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--up);margin-right:6px;animation:pulse 1.6s infinite}
+.live .dot.off{background:var(--sub);animation:none}
+@keyframes pulse{50%{opacity:.25}}
+.live ul{list-style:none;margin:0;padding:0;font-size:13px}
+.live li{display:flex;justify-content:space-between;gap:10px;padding:2px 0}
+.live li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.live svg{height:44px}
+@media (max-width:820px){.live{grid-template-columns:1fr}}
 .foot{color:var(--sub);font-size:12px;text-align:center;padding:10px 0 24px}
 @media (max-width:820px){.grid{grid-template-columns:1fr}td .tx{max-width:180px}}
-@media print{.top .years,.top .mons,.btn,.seg{display:none}.top{position:static}}
+@media print{.top .years,.top .mons,.btn,.tgl,.seg{display:none}.top{position:static}}
 </style>
 </head>
 <body>
 <div class="top"><div class="in">
-  <div class="bar1"><h1>__TITLE__</h1><span class="upd" id="upd"></span><button class="btn" id="theme">테마</button><button class="btn" onclick="print()">인쇄/PDF</button></div>
+  <div class="bar1"><h1>__TITLE__</h1><span class="upd" id="upd"></span><button class="btn ic" id="refresh" title="최신 데이터로 업데이트"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>업데이트</span></button><button class="tgl" id="theme" role="switch" aria-label="다크 모드" title="테마 전환"><span class="k">☀</span><span class="k">☾</span><i></i></button><button class="btn ic" onclick="print()" title="인쇄 / PDF 저장"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/></svg><span>인쇄/PDF</span></button></div>
   <div class="years" id="years"></div>
   <div class="mons" id="mons"></div>
 </div></div>
+<div id="liveBox" style="max-width:1200px;margin:0 auto;padding:16px 16px 0"></div>
 <main id="main"></main>
-<div class="foot">출처: Google Analytics 4 · 3시간마다 자동 갱신 · 고도몰 애널리틱스와 수치 정의가 달라 값이 다를 수 있습니다.</div>
+<div class="foot">출처: Google Analytics 4 · 수집 15분마다 · 화면 2분마다 갱신 · 접속자 30초마다 · 고도몰 애널리틱스와 수치 정의가 달라 값이 다를 수 있습니다.</div>
 <script>
 const D = "__DATA__";
 const $ = (id) => document.getElementById(id);
@@ -73,13 +89,16 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const fmt = (n) => (n == null || isNaN(n) ? '―' : Math.round(n).toLocaleString('ko-KR'));
 const dur = (s) => { if (!s || isNaN(s)) return '―'; s = Math.round(s); return s >= 60 ? `${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, '0')}초` : `${s}초`; };
 try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
-$('theme').onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches; r.dataset.theme = dark ? 'light' : 'dark'; try { localStorage.setItem('theme', r.dataset.theme); } catch (e) {} };
+const isDark = () => { const r = document.documentElement; return r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches; };
+const syncTheme = () => $('theme').setAttribute('aria-checked', isDark());
+syncTheme();
+$('theme').onclick = () => { const r = document.documentElement; const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches; r.dataset.theme = dark ? 'light' : 'dark'; try { localStorage.setItem('theme', r.dataset.theme); } catch (e) {} syncTheme(); };
 
 const keys = Object.keys(D.months).sort();
 const years = [...new Set(keys.map((k) => k.slice(0, 4)))];
 let sel = location.hash.slice(1);
 if (!sel || (!D.months[sel] && !years.includes(sel))) sel = keys[keys.length - 1] || '';
-let chartMetric = 'activeUsers', srcTab = 'sourceMedium', annMetric = 'sessions';
+let chartMetric = 'activeUsers', srcTab = 'sourceMedium', annMetric = 'sessions', shopTab = 'goods';
 
 const signups = (m) => (m.signups || []).reduce((a, r) => a + r.count, 0);
 const metricOf = (m, k) => k === 'signups' ? signups(m) : m.total[k];
@@ -101,8 +120,8 @@ function header() {
   const h = (Date.now() - u) / 36e5;
   const s = u.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
   el.textContent = `마지막 갱신 ${s} (${h < 1 ? '방금' : h < 24 ? Math.round(h) + '시간 전' : Math.round(h / 24) + '일 전'})`;
-  el.classList.toggle('stale', h > 36);
-  if (h > 36) el.textContent += ' · 갱신이 지연되고 있습니다';
+  el.classList.toggle('stale', h > 6);
+  if (h > 6) el.textContent += ' · 갱신이 지연되고 있습니다';
   $('years').innerHTML = years.map((y) => `<button class="y ${sel.startsWith(y) ? 'on' : ''}" data-s="${y}">${y}년</button>`).join('');
   const y = sel.slice(0, 4);
   $('mons').innerHTML = `<button class="m all ${sel === y ? 'on' : ''}" data-s="${y}">연간</button>` + Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, '0')}`; return `<button class="m ${sel === k ? 'on' : ''}" data-s="${k}" ${D.months[k] ? '' : 'disabled'}>${i + 1}월</button>`; }).join('');
@@ -162,9 +181,23 @@ function renderMonth(k) {
     <div class="grid">
       <div class="card"><h2>인기 페이지</h2><div class="tw">${ptable}</div></div>
       <div class="card"><h2>유입 ${seg([['sourceMedium', '매체'], ['channel', '채널'], ['utm', 'UTM'], ['device', '기기']], srcTab, 'st')}</h2><div class="tw">${stable}</div></div>
-    </div>`;
+    </div>
+    ${shopCard(m)}`;
+  document.querySelectorAll('[data-sh]').forEach((b) => b.onclick = () => { shopTab = b.dataset.sh; render(); });
   document.querySelectorAll('[data-cm]').forEach((b) => b.onclick = () => { chartMetric = b.dataset.cm; render(); });
   document.querySelectorAll('[data-st]').forEach((b) => b.onclick = () => { srcTab = b.dataset.st; render(); });
+}
+const GENERIC = /^아이티켓 - /;
+const nm = (r) => (D.names && D.names[shopTab] && D.names[shopTab][r.id]) || (r.title && !GENERIC.test(r.title) ? r.title : '#' + r.id + ' (이름 확인 중)');
+function shopCard(m) {
+  const tabs = [['goods', '인기 상품'], ['categories', '인기 카테고리'], ['boards', '인기 게시판']];
+  const list = m[shopTab];
+  const head = `<h2 style="margin-top:14px">고도몰 인기 항목 <span style="color:var(--sub);font-size:12px;font-weight:400">쇼핑몰 URL 기준 조회수</span> ${seg(tabs, shopTab, 'sh')}</h2>`;
+  if (!list) return `<div class="card" style="margin-top:14px"><h2>고도몰 인기 항목</h2><div class="empty">이 달은 아직 집계 전입니다. 수집기가 과거 월을 순서대로 채우는 중이면 잠시 후 나타납니다.</div></div>`;
+  const tot = list.reduce((a, r) => a + r.views, 0) || 1, mx = Math.max(1, ...list.map((r) => r.views));
+  const label = { goods: '상품번호', categories: '카테고리 코드', boards: '게시판 ID' }[shopTab];
+  const body = list.length ? `<table><thead><tr><th>#</th><th>이름(페이지 제목)</th><th>${label}</th><th class="n">조회수</th><th class="n">비율</th></tr></thead><tbody>${list.slice(0, 30).map((r, i) => `<tr><td>${i + 1}</td><td><span class="tx" title="${esc(nm(r))}">${esc(nm(r))}</span><span class="sh" style="width:${Math.max(2, r.views / mx * 100)}%"></span></td><td>${esc(r.id)}</td><td class="n">${fmt(r.views)}</td><td class="n">${(r.views / tot * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
+  return `<div class="card">${head.replace('margin-top:14px', 'margin-top:0')}<div class="tw">${body}</div></div>`;
 }
 function k2v(r, m) { const s = (m.signups || []).find((x) => x.date === r.date); return { ...r, signups: s ? s.count : 0 }; }
 
@@ -192,6 +225,53 @@ function render() {
   if (!keys.length) { $('main').innerHTML = '<div class="empty">아직 수집된 데이터가 없습니다.<br>저장소의 Actions에서 “Update Dashboard”를 실행하면 첫 수집이 시작됩니다.</div>'; return; }
   if (/^\d{4}$/.test(sel)) renderYear(sel); else renderMonth(sel);
 }
+// ── 실시간: GA4 Realtime API(최근 30분)를 Apps Script 웹앱으로 30초마다 직접 조회 ──
+const liveUrl = D.liveUrl || '';
+let lastLiveOk = 0;
+function renderLive(l, err) {
+  const box = $('liveBox');
+  if (!liveUrl) { box.innerHTML = ''; return; }
+  if (!l) { box.innerHTML = `<div class="live"><div><div class="l"><span class="dot off"></span>실시간</div><div class="n" style="font-size:18px">${err ? '연결 대기 중…' : '불러오는 중…'}</div></div></div>`; return; }
+  const mins = Array(30).fill(0);
+  (l.minutes || []).forEach((r) => { const i = +r.minutesAgo; if (i >= 0 && i < 30) mins[29 - i] = r.activeUsers; });
+  const mx = Math.max(1, ...mins);
+  const spark = `<svg viewBox="0 0 300 44" preserveAspectRatio="none" role="img">${mins.map((v, i) => `<rect class="b" x="${i * 10 + 1}" y="${44 - Math.max(1.5, v / mx * 42)}" width="8" height="${Math.max(1.5, v / mx * 42)}" rx="1.5"><title>${30 - i}분 전: ${v}명</title></rect>`).join('')}</svg>`;
+  const pages = (l.pages || []).slice(0, 5).map((r) => `<li><span title="${esc(r.unifiedScreenName)}">${esc(r.unifiedScreenName || '(제목 없음)')}</span><span>${fmt(r.activeUsers)}명</span></li>`).join('') || '<li><span style="color:var(--sub)">지금 보는 페이지 없음</span></li>';
+  const dev = (l.devices || []).map((r) => `${{ desktop: 'PC', mobile: '모바일', tablet: '태블릿' }[r.deviceCategory] || r.deviceCategory} ${fmt(r.activeUsers)}`).join(' · ');
+  const ago = Math.max(0, Math.round((Date.now() - new Date(l.at)) / 1000));
+  box.innerHTML = `<div class="live"><div><div class="l"><span class="dot"></span>지금 접속 중 (최근 30분)</div><div class="n">${fmt(l.activeUsers)}명</div><div class="l">${dev || '&nbsp;'} · ${ago < 5 ? '방금' : ago + '초 전'} 갱신</div></div><div><div class="l" style="margin-bottom:2px">분당 접속자 (30분)</div>${spark}</div><div><div class="l" style="margin-bottom:2px">지금 보는 페이지</div><ul>${pages}</ul></div></div>`;
+}
+async function pollLive() {
+  if (!liveUrl || document.visibilityState === 'hidden') return;
+  try {
+    const r = await fetch(liveUrl + '?mode=live');
+    const j = await r.json();
+    if (j.error || typeof j.activeUsers !== 'number') throw new Error(j.error || 'bad live payload');
+    lastLiveOk = Date.now(); renderLive(j);
+  } catch (e) { if (!lastLiveOk) renderLive(null, true); }
+}
+// 당월 수치: 수집기가 15분마다 갱신 → 화면은 2분마다 가져와 바뀐 경우에만 다시 그린다
+async function pollCur() {
+  if (!liveUrl || document.visibilityState === 'hidden') return;
+  try {
+    const j = await (await fetch(liveUrl + '?mode=cur')).json();
+    if (!j.months) return;
+    let changed = false;
+    for (const k of Object.keys(j.months)) {
+      const old = D.months[k];
+      if (!old || old.updated !== j.months[k].updated) { D.months[k] = j.months[k]; changed = true; }
+    }
+    if (j.updated && j.updated !== D.meta.updated) { D.meta.updated = j.updated; changed = true; }
+    if (changed) { const y = scrollY; render(); scrollTo(0, y); }
+  } catch (e) {}
+}
+if (liveUrl) { renderLive(null); pollLive(); pollCur(); setInterval(pollLive, 30000); setInterval(pollCur, 120000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pollLive(); pollCur(); } }); }
+$('refresh').onclick = async () => {
+  if (!liveUrl) { location.reload(); return; }
+  const b = $('refresh'); b.disabled = true; b.classList.add('spin');
+  await Promise.all([pollLive(), pollCur()]);
+  b.disabled = false; b.classList.remove('spin'); header();
+};
 addEventListener('hashchange', () => { const s = location.hash.slice(1); if (s && s !== sel && (D.months[s] || years.includes(s))) { sel = s; render(); } });
 render();
 </script>

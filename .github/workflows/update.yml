@@ -35,7 +35,12 @@ jobs:
           GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
           GA4_SERVICE_ACCOUNT: ${{ secrets.GA4_SERVICE_ACCOUNT }}
         run: node scripts/collect.mjs
+      - name: 상품·카테고리·게시판 이름 조회
+        continue-on-error: true
+        run: node scripts/resolve-names.mjs
       - name: 대시보드 생성
+        env:
+          GA4_WEBAPP_URL: ${{ secrets.GA4_WEBAPP_URL }}
         run: node scripts/build-site.mjs
       - name: 변경분 커밋
         run: |
