@@ -8,9 +8,9 @@
 <meta name="robots" content="noindex,nofollow">
 <title>__TITLE__</title>
 <style>
-:root{--bg:#f7f8f8;--side:#fbfbfc;--card:#fff;--ink:#0f1011;--ink2:#3c4149;--sub:#62666d;--line:#e6e7ea;--line2:#d4d6db;--acc:#5e6ad2;--accbg:#eceefb;--accink:#4650b8;--hi:#f59e0b;--hi-ink:#b45309;--up:#1f8a3b;--down:#d92d3a;--warn:#9a5b00;--warnbg:#fff4e0;--bar:#5e6ad2;--bar2:#c9cef3;--sh:0 1px 2px rgba(15,16,17,.04)}
-:root[data-theme=dark]{--bg:#08090a;--side:#0b0c0d;--card:#0f1011;--ink:#f7f8f8;--ink2:#d0d6e0;--sub:#8a8f98;--line:#23252a;--line2:#34343a;--acc:#5e6ad2;--accbg:#1a1c33;--accink:#9aa3ff;--hi:#fbbf24;--hi-ink:#fbbf24;--up:#3ecf5f;--down:#ff6369;--warn:#f0b04a;--warnbg:#2b2210;--bar:#6c78e6;--bar2:#2c3170;--sh:none}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#08090a;--side:#0b0c0d;--card:#0f1011;--ink:#f7f8f8;--ink2:#d0d6e0;--sub:#8a8f98;--line:#23252a;--line2:#34343a;--acc:#5e6ad2;--accbg:#1a1c33;--accink:#9aa3ff;--hi:#fbbf24;--hi-ink:#fbbf24;--up:#3ecf5f;--down:#ff6369;--warn:#f0b04a;--warnbg:#2b2210;--bar:#6c78e6;--bar2:#2c3170;--sh:none}}
+:root{--bg:#f7f8f8;--side:#fbfbfc;--card:#fff;--ink:#0f1011;--ink2:#3c4149;--sub:#62666d;--line:#e6e7ea;--line2:#d4d6db;--acc:#5e6ad2;--accbg:#eceefb;--accink:#4650b8;--hi:#f59e0b;--hi-ink:#b45309;--up:#1f8a3b;--down:#d92d3a;--rise:#d92d3a;--fall:#2f6fed;--warn:#9a5b00;--warnbg:#fff4e0;--bar:#5e6ad2;--bar2:#c9cef3;--sh:0 1px 2px rgba(15,16,17,.04)}
+:root[data-theme=dark]{--bg:#08090a;--side:#0b0c0d;--card:#0f1011;--ink:#f7f8f8;--ink2:#d0d6e0;--sub:#8a8f98;--line:#23252a;--line2:#34343a;--acc:#5e6ad2;--accbg:#1a1c33;--accink:#9aa3ff;--hi:#fbbf24;--hi-ink:#fbbf24;--up:#3ecf5f;--down:#ff6369;--rise:#ff6369;--fall:#5b9bff;--warn:#f0b04a;--warnbg:#2b2210;--bar:#6c78e6;--bar2:#2c3170;--sh:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#08090a;--side:#0b0c0d;--card:#0f1011;--ink:#f7f8f8;--ink2:#d0d6e0;--sub:#8a8f98;--line:#23252a;--line2:#34343a;--acc:#5e6ad2;--accbg:#1a1c33;--accink:#9aa3ff;--hi:#fbbf24;--hi-ink:#fbbf24;--up:#3ecf5f;--down:#ff6369;--rise:#ff6369;--fall:#5b9bff;--warn:#f0b04a;--warnbg:#2b2210;--bar:#6c78e6;--bar2:#2c3170;--sh:none}}
 html{font-size:16px}
 :root{--th:4rem}
 *{box-sizing:border-box}
@@ -68,7 +68,9 @@ main{padding:0}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:0.75rem;padding:1rem 1rem;box-shadow:var(--sh)}
 .kpi .sub1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi .l{color:var(--sub);font-size:0.75rem;font-weight:500}.kpi .v{font-size:1.75rem;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:0.25rem 0 0.25rem}
-.d{font-size:0.75rem;font-weight:600;display:inline-block;margin-right:0.5rem;font-variant-numeric:tabular-nums}.up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--sub)}
+.kpi:has(.d.up){background:color-mix(in srgb,var(--rise) 7%,var(--card));border-color:color-mix(in srgb,var(--rise) 22%,var(--line))}
+.kpi:has(.d.down){background:color-mix(in srgb,var(--fall) 7%,var(--card));border-color:color-mix(in srgb,var(--fall) 22%,var(--line))}
+.d{font-size:0.75rem;font-weight:600;display:inline-block;margin-right:0.5rem;font-variant-numeric:tabular-nums}.d.up{color:var(--rise)}.d.down{color:var(--fall)}.flat{color:var(--sub)}
 .d small{font-weight:400;color:var(--sub)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:0.75rem;padding:1rem 1.25rem;margin-bottom:1rem;box-shadow:var(--sh)}
 .card h2{font-size:0.875rem;font-weight:600;letter-spacing:-.01em;margin:0 0 0.75rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap}
@@ -458,15 +460,6 @@ function renderMonth(k) {
   cards.push(`<div class="kpi"><div class="l">방문자당 체류시간</div><div class="v">${dur(avg)}</div>${n ? '' : dl(avg, pa, '전월')}</div>`);
   const series = m.daily.map((r) => k2v(r, m));
   const labels = m.daily.map((r) => +r.date.slice(8) + '일');
-  const tot = (rowsx, key) => rowsx.reduce((a, r) => a + (r[key] || 0), 0);
-  const src = {
-    sourceMedium: ['유입 매체', m.sources, 'sessionSourceMedium', 'sessions', ['세션', 'sessions'], ['방문자', 'activeUsers']],
-    channel: ['채널', m.channels, 'sessionDefaultChannelGroup', 'sessions', ['세션', 'sessions'], ['방문자', 'activeUsers']],
-    utm: ['UTM 캠페인', m.campaigns, 'sessionCampaignName', 'sessions', ['세션', 'sessions'], ['방문자', 'activeUsers']],
-    device: ['기기', m.devices, 'deviceCategory', 'sessions', ['세션', 'sessions'], ['방문자', 'activeUsers']],
-  }[srcTab];
-  const srows = src[1].slice(0, 12), stot = tot(src[1], src[3]) || 1;
-  const stable = srows.length ? `<table><thead><tr><th>${src[0]}</th><th class="n">${src[4][0]}</th><th class="n">${src[5][0]}</th></tr></thead><tbody>${srows.map((r) => `<tr><td><span class="tx" title="${esc(r[src[2]])}">${esc(r[src[2]])}${srcTab === 'utm' ? ` <span style="color:var(--sub)">· ${esc(r.sessionSourceMedium)}</span>` : ''}</span><span class="sh" style="width:${Math.max(2, r[src[3]] / stot * 100)}%"></span></td><td class="n">${fmt(r[src[4][1]])}</td><td class="n">${fmt(r[src[5][1]])}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음 (UTM이 붙은 유입이 없으면 비어 있습니다)</div>';
   const pmax = Math.max(1, ...m.pages.map((p) => p.screenPageViews));
   // 방문자 1명당 조회수가 비정상적으로 높은 페이지(내부 새로고침·자동 접속 의심)는 표시하고, 고도몰 통계와 어긋나는 원인으로 알려 준다
   const sp = suspOf(m);
@@ -479,17 +472,13 @@ function renderMonth(k) {
     <div class="kpis">${cards.join('')}</div>
     ${convCard(m, prev, n)}
     <div class="card"><h2>일별 추이 ${seg(METRICS, chartMetric, 'cm')}</h2>${dailyChart(series.map((r) => r[chartMetric]), m.daily.map((r) => r.date), chartMetric === 'signups' ? '건' : '')}</div>
-    <div class="grid">
-      <div class="card"><h2>인기 페이지</h2><div class="tw">${ptable}</div>${suspNote}</div>
-      <div class="card"><h2>유입 ${seg([['sourceMedium', '매체'], ['channel', '채널'], ['utm', 'UTM'], ['device', '기기']], srcTab, 'st')}</h2><div class="tw">${stable}</div></div>
-    </div>
+     <div class="card"><h2>인기 페이지</h2><div class="tw">${ptable}</div>${suspNote}</div>
     ${shopCard(m)}
     ${whyCard()}`;
   bindDaily(); bindConv();
   document.querySelectorAll('[data-pp]').forEach((r) => r.onclick = () => openPage(r.dataset.pp));
   document.querySelectorAll('[data-sh]').forEach((b) => b.onclick = () => { shopTab = b.dataset.sh; render(); });
   document.querySelectorAll('[data-cm]').forEach((b) => b.onclick = () => { chartMetric = b.dataset.cm; render(); });
-  document.querySelectorAll('[data-st]').forEach((b) => b.onclick = () => { srcTab = b.dataset.st; render(); });
 }
 const GENERIC = /^아이티켓 - /;
 const nm = (r) => (D.names && D.names[shopTab] && D.names[shopTab][r.id]) || (r.title && !GENERIC.test(r.title) ? r.title : '#' + r.id + ' (이름 확인 중)');
@@ -548,7 +537,7 @@ function renderYear(y) {
 
 // ── 전환 (정의: 전환 화면을 본 세션 — 수집기 CONVERSIONS) ──
 let convSel = 'estimate', convBy = 'byMedium';
-const CONV_BY = [['byMedium', '유입 매체'], ['byChannel', '채널'], ['byCampaign', '캠페인'], ['byLanding', '랜딩 페이지'], ['byGoods', '상품']];
+const CONV_BY = [['byMedium', '유입 매체'], ['byChannel', '채널'], ['byCampaign', '캠페인'], ['byLanding', '랜딩 페이지'], ['byGoods', '상품'], ['byDevice', '기기']];
 const pct = (a, b) => b > 0 ? (a / b * 100).toFixed(1) + '%' : '―';
 const convDaily = (m, id, n) => ((m.conv && m.conv.daily[id]) || []).filter((r) => !n || +r.date.slice(8) <= n).reduce((a, r) => a + r.count, 0);
 const convRowName = (r) => {
@@ -568,10 +557,16 @@ function convCard(m, prev, n) {
     return `<div class="kpi"><div class="l">${esc(d.name)}</div><div class="v">${fmt(cur)}</div>${pv != null ? dl(n ? convDaily(m, d.id, n) : cur, pv, n ? '전월 동기간' : '전월') : ''}<div class="l sub1" style="margin-top:0.25rem" title="${esc(d.path)} 화면을 본 세션 수 ÷ 전체 세션">전환율 ${pct(cur, m.total.sessions)}</div></div>`;
   }).join('');
   const def = defs.find((d) => d.id === convSel) || {};
-  const rows = ((c[convBy] || {})[convSel] || []).slice(0, 15);
-  const mx = Math.max(1, ...rows.map((r) => r.s));
+  const convRows = ((c[convBy] || {})[convSel] || []);
+  // 유입 매체·채널·기기는 전환이 없는 항목도 보이도록 GA4 유입 목록(세션·방문자)을 기준으로 전환을 붙인다
+  const SRC = { byMedium: [m.sources, 'sessionSourceMedium'], byChannel: [m.channels, 'sessionDefaultChannelGroup'], byDevice: [m.devices, 'deviceCategory'] }[convBy];
+  const hasConv = convBy !== 'byDevice';
+  const rows = SRC
+    ? (SRC[0] || []).slice(0, 15).map((x) => { const cr = convRows.find((r) => r.k === x[SRC[1]]); return { k: x[SRC[1]], n: x.sessions, u: x.activeUsers, s: cr ? cr.s : 0 }; })
+    : convRows.slice(0, 15);
+  const mx = Math.max(1, ...rows.map((r) => SRC ? r.n : r.s));
   const clickable = convBy === 'byLanding' || convBy === 'byGoods';
-  const table = rows.length ? `<table><thead><tr><th>${CONV_BY.find((x) => x[0] === convBy)[1]}</th><th class="n">전환 세션</th><th class="n hm">전체 세션</th><th class="n">전환율</th></tr></thead><tbody>${rows.map((r) => `<tr class="${clickable ? 'go' : ''}" ${clickable ? `data-pq="${esc(convQ(r))}"` : ''}><td><span class="tx" title="${esc(r.k)}">${convRowName(r)}</span><span class="sh" style="width:${Math.max(2, r.s / mx * 100)}%"></span></td><td class="n">${fmt(r.s)}</td><td class="n hm">${fmt(r.n)}</td><td class="n rate">${pct(r.s, r.n)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">이 기준으로 집계된 전환이 없습니다.</div>';
+  const table = rows.length ? `<table><thead><tr><th>${CONV_BY.find((x) => x[0] === convBy)[1]}</th>${SRC ? '<th class="n">세션</th><th class="n hm">방문자</th>' : ''}${hasConv ? `<th class="n">전환 세션</th>${SRC ? '' : '<th class="n hm">전체 세션</th>'}<th class="n">전환율</th>` : ''}</tr></thead><tbody>${rows.map((r) => `<tr class="${clickable ? 'go' : ''}" ${clickable ? `data-pq="${esc(convQ(r))}"` : ''}><td><span class="tx" title="${esc(r.k)}">${convRowName(r)}</span><span class="sh" style="width:${Math.max(2, (SRC ? r.n : r.s) / mx * 100)}%"></span></td>${SRC ? `<td class="n">${fmt(r.n)}</td><td class="n hm">${fmt(r.u)}</td>` : ''}${hasConv ? `<td class="n">${fmt(r.s)}</td>${SRC ? '' : `<td class="n hm">${fmt(r.n)}</td>`}<td class="n rate">${pct(r.s, r.n)}</td>` : ''}</tr>`).join('')}</tbody></table>` : '<div class="empty">이 기준으로 집계된 전환이 없습니다.</div>';
   const ev = m.events || [];
   const badKey = ev.filter((e) => e.keyEvents > 0 && /^(page_view|session_start|first_visit|scroll|user_engagement|click)$/.test(e.eventName)).map((e) => e.eventName);
   const kb = badKey.length ? [] : (m.keyBySource || []).slice(0, 6);
