@@ -71,6 +71,23 @@ function collectMock(m) {
     campaigns: [{ sessionCampaignName: 'brand_search', sessionSourceMedium: 'naver / cpc', sessions: Math.round(total.sessions / 7), activeUsers: Math.round(total.activeUsers / 8) }],
     devices: [['desktop', 1.6], ['mobile', 2.2], ['tablet', 14]].map(([n, d]) => ({ deviceCategory: n, activeUsers: Math.round(total.activeUsers / d), sessions: Math.round(total.sessions / d) })),
     signups: daily.filter((_, i) => i % 3 === 0).map((r) => ({ date: r.date, count: 1 + Math.round(rnd() * 3) })),
+    conv: (() => {
+      const defs = [{ id: 'estimate', name: '견적 요청 완료', path: '/dbk/dbk_estimate_complete.php' }, { id: 'signup', name: '회원가입 완료', path: '/member/join_ok.php' }, { id: 'order', name: '주문 완료', path: '/order/order_end.php' }];
+      const out = { defs, total: {}, daily: {}, byMedium: {}, byChannel: {}, byCampaign: {}, byLanding: {}, byGoods: {} };
+      defs.forEach((d, di) => {
+        const f = [0.012, 0.006, 0.003][di];
+        out.total[d.id] = { sessions: Math.round(total.sessions * f), users: Math.round(total.sessions * f * 0.9) };
+        out.daily[d.id] = daily.map((r) => ({ date: r.date, count: Math.round(r.sessions * f) }));
+        const mk = (names) => names.map((k, i) => ({ k, s: Math.round(out.total[d.id].sessions / (i + 1.7)), n: Math.round(total.sessions / (i + 1.4)) }));
+        out.byMedium[d.id] = mk(src); out.byChannel[d.id] = mk(['Organic Search', 'Direct', 'Paid Search']);
+        out.byCampaign[d.id] = mk(['brand_search | naver / cpc', 'GDN_test | google / cpc']);
+        out.byLanding[d.id] = mk(['/', '/huawei/huawei_intro.php', '/dbk/dbk_estimate_form.php']);
+        out.byGoods[d.id] = mk(['11166', '11003', '11012']);
+      });
+      return out;
+    })(),
+    events: [['page_view', 1], ['session_start', 0.7], ['scroll', 0.4], ['click', 0.2]].map(([eventName, r]) => ({ eventName, eventCount: Math.round(total.screenPageViews * r), totalUsers: Math.round(total.activeUsers * r), keyEvents: 0 })),
+    keyBySource: [], ecom: [],
     goods: [['11166', 'Huawei FusionCube 1000'], ['11003', 'HP 255R G10'], ['11012', 'HP ZGX Nano G1n']].map(([id, title], i) => ({ id, title, views: Math.round(total.screenPageViews / (i + 30)) })),
     categories: [['038006003', 'HUAWEI 스토리지'], ['021001', 'HPE ProLiant 서버']].map(([id, title], i) => ({ id, title, views: Math.round(total.screenPageViews / (i + 12)) })),
     boards: [['Constructioncase', '구축사례'], ['docuread', '자료실']].map(([id, title], i) => ({ id, title, views: Math.round(total.screenPageViews / (i + 40)) })),

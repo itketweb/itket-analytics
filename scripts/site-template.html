@@ -35,6 +35,16 @@ button{font-family:inherit}
 .m.on{background:var(--accbg);color:var(--accink);font-weight:600}
 .m:disabled{opacity:.35;cursor:default}
 .flag{color:var(--warn);font-weight:700}
+.sn{display:flex;flex-direction:column;gap:0.25rem}.sn .m{font-weight:600}
+.sbox{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem}
+.sbox input[type=search],.sbox select{height:2.25rem;border:1px solid var(--line2);border-radius:0.5rem;background:var(--card);color:var(--ink);padding:0 0.75rem;font:inherit}
+.sbox input[type=search]{flex:1;min-width:12rem}
+.sbox .btn{height:2.25rem}.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}.btn.pri:hover{background:var(--acc);opacity:.9}
+.chips{display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.5rem 0 0}.chips button{border:1px solid var(--line2);background:var(--card);color:var(--ink2);border-radius:1rem;padding:0.25rem 0.75rem;font-size:0.75rem;cursor:pointer;max-width:16rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chips button:hover{background:var(--accbg)}
+.hint{color:var(--sub);font-size:0.75rem;line-height:1.6;margin:0.5rem 0 0}
+.rate{font-weight:600;color:var(--accink)}
+tr.go{cursor:pointer}tr.go:hover td{background:var(--accbg)}
+.tag{display:inline-block;padding:0.0625rem 0.5rem;border-radius:0.5rem;font-size:0.75rem;font-weight:600;background:var(--accbg);color:var(--accink)}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.ok{background:color-mix(in srgb,var(--up) 15%,transparent);color:var(--up)}
 .m.all{font-weight:600;margin-bottom:0.25rem}
 .side .sfoot{margin-top:auto;font-size:0.75rem;color:var(--sub);padding:0 0.5rem;line-height:1.5}
 .wrap{min-width:0;display:flex;flex-direction:column}
@@ -206,6 +216,7 @@ html{min-width:360px}
 <aside class="side" id="side">
   <button class="btn ic sclose" id="sclose" aria-label="메뉴 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   <a class="brand" id="brand" href="./" title="처음으로"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></i><span>__TITLE__</span></a>
+  <div class="sn"><button class="m" id="navDash" data-nav="dash">대시보드</button><button class="m" id="navPage" data-nav="page">페이지 분석</button></div>
   <div class="sy"><div class="lbl" style="margin-bottom:0.5rem">연도</div><div class="years" id="years"></div></div>
   <div class="sm"><div class="lbl" style="margin-bottom:0.5rem">기간</div><nav class="mons" id="mons"></nav></div>
   <div class="sfoot">출처: Google Analytics 4<br>수집 15분 · 화면 5분<br>접속자 30초 간격 갱신</div>
@@ -243,6 +254,16 @@ const keys = Object.keys(D.months).sort();
 const years = [...new Set(keys.map((k) => k.slice(0, 4)))];
 let sel = location.hash.slice(1);
 if (!sel || (!D.months[sel] && !years.includes(sel))) sel = keys[keys.length - 1] || '';
+// 페이지 분석 화면: #page/<검색어>/<월>
+let isPage = false, pageQ = '', pageM = '';
+function readHash() {
+  const p = location.hash.slice(1).split('/');
+  if (p[0] === 'page') { isPage = true; try { pageQ = decodeURIComponent(p[1] || ''); } catch (e) { pageQ = ''; } pageM = /^\d{4}-\d{2}$/.test(p[2] || '') ? p[2] : ''; return true; }
+  isPage = false; return false;
+}
+readHash();
+if (isPage && !pageM) pageM = keys[keys.length - 1] || '';
+if (isPage) sel = keys[keys.length - 1] || '';
 let chartMetric = 'activeUsers', srcTab = 'sourceMedium', annMetric = 'sessions', shopTab = 'goods';
 
 const signups = (m) => (m.signups || []).reduce((a, r) => a + r.count, 0);
@@ -273,16 +294,16 @@ const dl = (cur, prev, label) => {
 function header() {
   const u = D.meta.updated ? new Date(D.meta.updated) : null;
   const el = $('upd');
-  $('crumb').textContent = sel ? (sel.length === 4 ? sel + '년 연간' : sel.slice(0, 4) + '년 ' + +sel.slice(5) + '월') : '';
+  $('crumb').textContent = isPage ? '페이지 분석' : sel ? (sel.length === 4 ? sel + '년 연간' : sel.slice(0, 4) + '년 ' + +sel.slice(5) + '월') : '';
   if (!u) { el.textContent = '아직 수집된 데이터가 없습니다'; return; }
   const h = (Date.now() - u) / 36e5;
   const s = u.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
   el.textContent = `마지막 갱신 ${s} (${h < 1 ? '방금' : h < 24 ? Math.round(h) + '시간 전' : Math.round(h / 24) + '일 전'})`;
   el.classList.toggle('stale', h > 6);
   if (h > 6) el.textContent += ' · 갱신이 지연되고 있습니다';
-  $('years').innerHTML = years.map((y) => `<button class="y ${sel.startsWith(y) ? 'on' : ''}" data-s="${y}">${y}년</button>`).join('');
+  $('years').innerHTML = years.map((y) => `<button class="y ${!isPage && sel.startsWith(y) ? 'on' : ''}" data-s="${y}">${y}년</button>`).join('');
   const y = sel.slice(0, 4);
-  $('mons').innerHTML = `<button class="m all ${sel === y ? 'on' : ''}" data-s="${y}">연간</button>` + Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, '0')}`; const gap = isGap(D.months[k]); return `<button class="m ${sel === k ? 'on' : ''}" data-s="${k}" ${D.months[k] && !gap ? '' : 'disabled'}${gap ? ' title="방문 측정이 빠진 달입니다 (고도몰 방문 통계도 0이지만 같은 기간 회원가입은 기록됨 — 측정 누락으로 추정)"' : ''}>${i + 1}월</button>`; }).join('');
+  $('mons').innerHTML = `<button class="m all ${!isPage && sel === y ? 'on' : ''}" data-s="${y}">연간</button>` + Array.from({ length: 12 }, (_, i) => { const k = `${y}-${String(i + 1).padStart(2, '0')}`; const gap = isGap(D.months[k]); return `<button class="m ${!isPage && sel === k ? 'on' : ''}" data-s="${k}" ${D.months[k] && !gap ? '' : 'disabled'}${gap ? ' title="방문 측정이 빠진 달입니다 (고도몰 방문 통계도 0이지만 같은 기간 회원가입은 기록됨 — 측정 누락으로 추정)"' : ''}>${i + 1}월</button>`; }).join('');
   document.querySelectorAll('[data-s]').forEach((b) => b.onclick = () => go(b.dataset.s, b.classList.contains('y')));
   const mo = $('mons'), on = mo.querySelector('.m.on');
   if (on && mo.scrollWidth > mo.clientWidth) mo.scrollLeft = on.offsetLeft - (mo.clientWidth - on.offsetWidth) / 2;
@@ -292,18 +313,21 @@ function drawer(on) {
   document.body.classList.toggle('lock', on); $('burger').setAttribute('aria-expanded', on);
 }
 $('burger').onclick = () => drawer(true);
+$('navDash').onclick = () => go(keys[keys.length - 1] || '');
+$('navPage').onclick = () => openPage(pageQ, pageM);
 $('scrim').onclick = $('sclose').onclick = () => drawer(false);
 addEventListener('keydown', (e) => { if (e.key === 'Escape') drawer(false); });
 addEventListener('resize', () => { if (innerWidth > 768) drawer(false); });
 // 처음 상태로 복귀: 해시·탭·선택 기간을 모두 초기값(가장 최근 달)으로
 function goHome() {
+  isPage = false; convSel = 'estimate'; convBy = 'byMedium';
   chartMetric = 'activeUsers'; srcTab = 'sourceMedium'; annMetric = 'sessions'; shopTab = 'goods';
   sel = keys[keys.length - 1] || '';
   history.replaceState(null, '', location.pathname + location.search);
   drawer(false); render(); window.scrollTo({ top: 0 });
 }
 $('brand').onclick = (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return; e.preventDefault(); goHome(); };
-function go(s, keep) { sel = s; history.replaceState(null, '', '#' + s); if (!keep) drawer(false); render(); window.scrollTo({ top: 0 }); }
+function go(s, keep) { isPage = false; sel = s; history.replaceState(null, '', '#' + s); if (!keep) drawer(false); render(); window.scrollTo({ top: 0 }); }
 
 const cardPad = () => { const el = document.createElement('div'); el.className = 'card'; el.style.cssText = 'position:absolute;visibility:hidden;width:0;margin:0'; document.body.appendChild(el); const c = getComputedStyle(el); const v = parseFloat(c.paddingLeft) + parseFloat(c.paddingRight) + parseFloat(c.borderLeftWidth) + parseFloat(c.borderRightWidth); el.remove(); return v; };
 const chartW = () => Math.max(280, Math.round(($('main').clientWidth || 860) - cardPad()));
@@ -407,6 +431,14 @@ function bindDaily() {
 const METRICS = [['activeUsers', '방문자'], ['sessions', '세션'], ['screenPageViews', '페이지뷰'], ['newUsers', '신규 방문자'], ['signups', '회원가입']];
 const seg = (items, cur, attr) => `<span class="seg">${items.map(([k, l]) => `<button class="${k === cur ? 'on' : ''}" data-${attr}="${k}">${l}</button>`).join('')}</span>`;
 
+function internalNote(k) {
+  const st = (D.internal && D.internal.state) || 'pending', since = D.internal && D.internal.since;
+  if (st === 'active' && since && k.slice(0, 7) > since.slice(0, 7)) return '';
+  const msg = st === 'active' && since ? `회사 IP 접속은 <b>${since}부터</b> GA4에서 제외됩니다. 이 달에는 그 이전 직원 접속이 섞여 있을 수 있습니다.`
+    : st === 'testing' ? '회사 IP 제외 필터가 <b>테스트 중</b>입니다(데이터는 아직 제외되지 않음). 확인 후 “활성”으로 바꾸면 그날부터 제외됩니다.'
+    : '<b>회사 IP 접속이 아직 제외되지 않았습니다.</b> 직원 접속·새로고침이 방문자·조회수·전환에 섞여 있습니다. GA4 내부 트래픽 필터 설정이 필요합니다(README “회사 IP 제외”).';
+  return `<div class="note" style="display:flex;gap:0.5rem;align-items:baseline"><span class="tag warn">내부 IP</span><span>${msg}</span></div>`;
+}
 function renderMonth(k) {
   const m = D.months[k], prev = okM(prevKey(k)), yoy = okM(yoyKey(k));
   const n = m.partial ? m.daily.length : null; // 진행 중인 달은 전월 같은 기간과 비교
@@ -440,10 +472,12 @@ function renderMonth(k) {
   const sp = suspOf(m);
   const susp = (p) => sp.list.includes(p);
   const suspNote = sp.list.length ? `<div class="note" style="margin:0.75rem 0 0">⚠ 표시된 페이지는 방문자 1명당 조회수가 ${SUSP_RATIO}배를 넘어 내부 새로고침·자동 접속일 수 있습니다. 초과분 약 ${fmt(sp.excess)}뷰(이 달 전체 페이지뷰의 ${(sp.excess / Math.max(1, m.total.screenPageViews) * 100).toFixed(0)}%)를 빼면 고도몰 통계와 거의 같아집니다. 고도몰은 이런 조회를 제외하는 것으로 보입니다.</div>` : '';
-  const ptable = m.pages.length ? `<table><thead><tr><th>페이지</th><th class="n">조회수</th><th class="n">방문자</th><th class="n hm">체류</th></tr></thead><tbody>${m.pages.slice(0, 15).map((p) => `<tr><td><span class="tx" title="${esc(p.pagePath)}">${susp(p) ? '<span class="flag" title="방문자 대비 조회수 과다">⚠</span> ' : ''}${esc(p.pagePath)}</span><span class="sh" style="width:${Math.max(2, p.screenPageViews / pmax * 100)}%"></span></td><td class="n">${fmt(p.screenPageViews)}</td><td class="n">${fmt(p.activeUsers)}</td><td class="n hm">${dur(p.activeUsers ? p.userEngagementDuration / p.activeUsers : 0)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
+  const ptable = m.pages.length ? `<table><thead><tr><th>페이지</th><th class="n">조회수</th><th class="n">방문자</th><th class="n hm">체류</th></tr></thead><tbody>${m.pages.slice(0, 15).map((p) => `<tr class="go" data-pp="${esc(p.pagePath)}" title="누르면 이 페이지의 상세 통계"><td><span class="tx" title="${esc(p.pagePath)}">${susp(p) ? '<span class="flag" title="방문자 대비 조회수 과다">⚠</span> ' : ''}${esc(p.pagePath)}</span><span class="sh" style="width:${Math.max(2, p.screenPageViews / pmax * 100)}%"></span></td><td class="n">${fmt(p.screenPageViews)}</td><td class="n">${fmt(p.activeUsers)}</td><td class="n hm">${dur(p.activeUsers ? p.userEngagementDuration / p.activeUsers : 0)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
   $('main').innerHTML = `
+    ${internalNote(k)}
     ${m.partial ? `<div class="note">진행 중인 달입니다 (${m.daily.length}일차까지 집계). 전월 대비는 같은 기간끼리 비교합니다.</div>` : ''}
     <div class="kpis">${cards.join('')}</div>
+    ${convCard(m, prev, n)}
     <div class="card"><h2>일별 추이 ${seg(METRICS, chartMetric, 'cm')}</h2>${dailyChart(series.map((r) => r[chartMetric]), m.daily.map((r) => r.date), chartMetric === 'signups' ? '건' : '')}</div>
     <div class="grid">
       <div class="card"><h2>인기 페이지</h2><div class="tw">${ptable}</div>${suspNote}</div>
@@ -451,7 +485,8 @@ function renderMonth(k) {
     </div>
     ${shopCard(m)}
     ${whyCard()}`;
-  bindDaily();
+  bindDaily(); bindConv();
+  document.querySelectorAll('[data-pp]').forEach((r) => r.onclick = () => openPage(r.dataset.pp));
   document.querySelectorAll('[data-sh]').forEach((b) => b.onclick = () => { shopTab = b.dataset.sh; render(); });
   document.querySelectorAll('[data-cm]').forEach((b) => b.onclick = () => { chartMetric = b.dataset.cm; render(); });
   document.querySelectorAll('[data-st]').forEach((b) => b.onclick = () => { srcTab = b.dataset.st; render(); });
@@ -486,7 +521,7 @@ function shopCard(m) {
   if (!list) return `<div class="card" style="margin-top:1rem"><h2>고도몰 인기 항목</h2><div class="empty">이 달은 아직 집계 전입니다. 수집기가 과거 월을 순서대로 채우는 중이면 잠시 후 나타납니다.</div></div>`;
   const tot = list.reduce((a, r) => a + r.views, 0) || 1, mx = Math.max(1, ...list.map((r) => r.views));
   const label = { goods: '상품번호', categories: '카테고리 코드', boards: '게시판 ID' }[shopTab];
-  const body = list.length ? `<table><thead><tr><th>#</th><th>이름(페이지 제목)</th><th class="hm">${label}</th><th class="n">조회수</th><th class="n">비율</th></tr></thead><tbody>${list.slice(0, 30).map((r, i) => `<tr><td>${i + 1}</td><td><span class="tx" title="${esc(nm(r))}">${esc(nm(r))}</span><span class="sh" style="width:${Math.max(2, r.views / mx * 100)}%"></span></td><td class="hm">${esc(r.id)}</td><td class="n">${fmt(r.views)}</td><td class="n">${(r.views / tot * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
+  const body = list.length ? `<table><thead><tr><th>#</th><th>이름(페이지 제목)</th><th class="hm">${label}</th><th class="n">조회수</th><th class="n">비율</th></tr></thead><tbody>${list.slice(0, 30).map((r, i) => `<tr class="${shopTab === 'goods' ? 'go' : ''}" ${shopTab === 'goods' ? `data-pp="goodsNo=${esc(r.id)}"` : ''}><td>${i + 1}</td><td><span class="tx" title="${esc(nm(r))}">${esc(nm(r))}</span><span class="sh" style="width:${Math.max(2, r.views / mx * 100)}%"></span></td><td class="hm">${esc(r.id)}</td><td class="n">${fmt(r.views)}</td><td class="n">${(r.views / tot * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
   return `<div class="card">${head.replace('margin-top:1rem', 'margin-top:0')}<div class="tw">${body}</div></div>`;
 }
 function k2v(r, m) { const s = (m.signups || []).find((x) => x.date === r.date); return { ...r, signups: s ? s.count : 0 }; }
@@ -511,8 +546,138 @@ function renderYear(y) {
   document.querySelectorAll('rect.hit').forEach((r) => r.onclick = () => { const i = +r.dataset.i, k = ks[i], d = $('dc'); if (!okM(k)) return; if (coarse && d && d._tap !== i) { d._tap = i; return; } go(k); });
 }
 
+// ── 전환 (정의: 전환 화면을 본 세션 — 수집기 CONVERSIONS) ──
+let convSel = 'estimate', convBy = 'byMedium';
+const CONV_BY = [['byMedium', '유입 매체'], ['byChannel', '채널'], ['byCampaign', '캠페인'], ['byLanding', '랜딩 페이지'], ['byGoods', '상품']];
+const pct = (a, b) => b > 0 ? (a / b * 100).toFixed(1) + '%' : '―';
+const convDaily = (m, id, n) => ((m.conv && m.conv.daily[id]) || []).filter((r) => !n || +r.date.slice(8) <= n).reduce((a, r) => a + r.count, 0);
+const convRowName = (r) => {
+  if (convBy === 'byCampaign') { const [c, md] = r.k.split(' | '); return `${esc(c)} <span style="color:var(--sub)">· ${esc(md || '')}</span>`; }
+  if (convBy === 'byGoods') return esc((D.names && D.names.goods && D.names.goods[r.k]) || '상품 #' + r.k) + ` <span style="color:var(--sub)">#${esc(r.k)}</span>`;
+  return esc(r.k);
+};
+const convQ = (r) => convBy === 'byGoods' ? 'goodsNo=' + r.k : convBy === 'byLanding' ? r.k : '';
+function convCard(m, prev, n) {
+  const c = m.conv;
+  if (!c) return `<div class="card"><h2>전환</h2><div class="empty">이 달의 전환 집계가 아직 없습니다.<br>수집기(Apps Script)를 새 버전으로 배포하면 과거 월부터 채워집니다 (README 참고).</div></div>`;
+  const defs = c.defs || [];
+  if (!defs.some((d) => d.id === convSel)) convSel = defs[0] && defs[0].id;
+  const cards = defs.map((d) => {
+    const t = c.total[d.id] || { sessions: 0 }, cur = t.sessions;
+    const pv = prev && prev.conv ? (n ? convDaily(prev, d.id, n) : (prev.conv.total[d.id] || {}).sessions) : null;
+    return `<div class="kpi"><div class="l">${esc(d.name)}</div><div class="v">${fmt(cur)}</div>${pv != null ? dl(n ? convDaily(m, d.id, n) : cur, pv, n ? '전월 동기간' : '전월') : ''}<div class="l sub1" style="margin-top:0.25rem" title="${esc(d.path)} 화면을 본 세션 수 ÷ 전체 세션">전환율 ${pct(cur, m.total.sessions)}</div></div>`;
+  }).join('');
+  const def = defs.find((d) => d.id === convSel) || {};
+  const rows = ((c[convBy] || {})[convSel] || []).slice(0, 15);
+  const mx = Math.max(1, ...rows.map((r) => r.s));
+  const clickable = convBy === 'byLanding' || convBy === 'byGoods';
+  const table = rows.length ? `<table><thead><tr><th>${CONV_BY.find((x) => x[0] === convBy)[1]}</th><th class="n">전환 세션</th><th class="n hm">전체 세션</th><th class="n">전환율</th></tr></thead><tbody>${rows.map((r) => `<tr class="${clickable ? 'go' : ''}" ${clickable ? `data-pq="${esc(convQ(r))}"` : ''}><td><span class="tx" title="${esc(r.k)}">${convRowName(r)}</span><span class="sh" style="width:${Math.max(2, r.s / mx * 100)}%"></span></td><td class="n">${fmt(r.s)}</td><td class="n hm">${fmt(r.n)}</td><td class="n rate">${pct(r.s, r.n)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">이 기준으로 집계된 전환이 없습니다.</div>';
+  const ev = m.events || [];
+  const badKey = ev.filter((e) => e.keyEvents > 0 && /^(page_view|session_start|first_visit|scroll|user_engagement|click)$/.test(e.eventName)).map((e) => e.eventName);
+  const kb = badKey.length ? [] : (m.keyBySource || []).slice(0, 6);
+  const extra = ev.length || (m.ecom && m.ecom.length) ? `<details style="margin-top:0.75rem"><summary style="cursor:pointer;font-size:0.875rem;color:var(--ink2)">GA4가 받고 있는 이벤트 · 주요 이벤트(전환) 설정 현황</summary>
+    <p class="hint">전환 화면 기준 집계가 정확한지 확인하는 용도입니다. ${badKey.length ? `<b style="color:var(--warn)">⚠ GA4에서 ${esc(badKey.join('·'))} 같은 자동 이벤트가 “주요 이벤트”로 표시되어 있어, 주요 이벤트 기준 수치는 전환으로 쓸 수 없습니다.</b> GA4 관리 → 이벤트에서 이들을 해제하고 estimate_complete(견적 완료)·홈페이지_견적문의·주문 완료 이벤트만 표시하면 정확해집니다. 그때까지는 위 “전환 화면 기준” 수치를 쓰세요.` : kb.length ? 'GA4에 “주요 이벤트”로 표시된 이벤트가 있어 아래 매체별 수치도 함께 보여 드립니다.' : 'GA4에서 “주요 이벤트”로 표시된 이벤트가 없습니다.'}</p>
+    <div class="tw"><table><thead><tr><th>이벤트</th><th class="n">발생 횟수</th><th class="n hm">사용자</th>${ev.some((e) => e.keyEvents != null) ? '<th class="n">주요 이벤트</th>' : ''}</tr></thead><tbody>${ev.slice(0, 20).map((e) => `<tr><td>${esc(e.eventName)}</td><td class="n">${fmt(e.eventCount)}</td><td class="n hm">${fmt(e.totalUsers)}</td>${e.keyEvents != null ? `<td class="n">${e.keyEvents ? fmt(e.keyEvents) : '―'}</td>` : ''}</tr>`).join('')}</tbody></table></div>
+    ${kb.length ? `<p class="hint" style="margin-top:0.75rem"><b>주요 이벤트 기준 · 유입 매체별</b></p><div class="tw"><table><thead><tr><th>매체</th><th class="n">세션</th><th class="n">주요 이벤트</th></tr></thead><tbody>${kb.map((r) => `<tr><td>${esc(r.sessionSourceMedium)}</td><td class="n">${fmt(r.sessions)}</td><td class="n">${fmt(r.keyEvents)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${m.ecom && m.ecom.length ? `<p class="hint" style="margin-top:0.75rem"><b>이커머스 상품 지표</b> (GA4 상품 이벤트가 전송될 때만 표시)</p><div class="tw"><table><thead><tr><th>상품</th><th class="n">조회</th><th class="n">장바구니</th><th class="n">구매</th></tr></thead><tbody>${m.ecom.slice(0, 15).map((e) => `<tr><td><span class="tx" title="${esc(e.name)}">${esc(e.name)}</span></td><td class="n">${fmt(e.viewed)}</td><td class="n">${fmt(e.cart)}</td><td class="n">${fmt(e.bought)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+  </details>` : '';
+  return `<div class="kpis">${cards}</div>
+  <div class="card"><h2>전환 분석 <span class="seg">${defs.map((d) => `<button class="${d.id === convSel ? 'on' : ''}" data-cv="${d.id}">${esc(d.name)}</button>`).join('')}</span></h2>
+    <div style="margin:-0.25rem 0 0.75rem">${seg(CONV_BY, convBy, 'cb')}</div>
+    <div class="tw">${table}</div>
+    <p class="hint">전환 = <b>${esc(def.path || '')}</b> 화면을 본 세션(같은 방문이 여러 번 봐도 1). 전환율 = 전환 세션 ÷ 같은 조건의 전체 세션. ${clickable ? '행을 누르면 그 페이지의 상세 통계를 봅니다. ' : ''}랜딩 페이지·상품은 <b>방문의 첫 화면</b> 기준입니다(그 상품을 보다가 다른 경로로 전환한 방문은 포함되지 않음).</p>
+    ${extra}</div>`;
+}
+function bindConv() {
+  document.querySelectorAll('[data-cv]').forEach((b) => b.onclick = () => { convSel = b.dataset.cv; render(); });
+  document.querySelectorAll('[data-cb]').forEach((b) => b.onclick = () => { convBy = b.dataset.cb; render(); });
+  document.querySelectorAll('[data-pq]').forEach((r) => r.onclick = () => openPage(r.dataset.pq));
+}
+
+// ── 페이지 분석: 특정 페이지(경로·키워드·상품번호)의 통계 — 수집기에 실시간 조회(?mode=page) ──
+const pageCache = {};
+let pageRes = null, pageBusy = false;
+function openPage(q, m) {
+  isPage = true; pageQ = (q || '').trim();
+  pageM = m || pageM || keys[keys.length - 1] || '';
+  history.replaceState(null, '', '#page' + (pageQ ? '/' + encodeURIComponent(pageQ) + '/' + pageM : ''));
+  drawer(false); pageRes = null; render(); window.scrollTo({ top: 0 });
+  if (pageQ) loadPage();
+}
+async function loadPage() {
+  const q = pageQ, m = pageM, key = m + '|' + q.toLowerCase();
+  if (pageCache[key] && Date.now() - pageCache[key].t < 120000) { pageRes = pageCache[key].v; renderPage(); return; }
+  if (!liveUrl) { pageRes = { offline: true }; renderPage(); return; }
+  pageBusy = true; pageRes = null; renderPage();
+  try {
+    const j = await (await fetch(`${liveUrl}?mode=page&month=${encodeURIComponent(m)}&q=${encodeURIComponent(q)}`)).json();
+    if (q !== pageQ || m !== pageM) return;
+    if (!j.error && !j.total) j.error = '수집기(Apps Script)가 아직 새 버전이 아닙니다. README의 “수집기 업데이트” 순서대로 새 버전으로 배포하면 사용할 수 있습니다.';
+    pageRes = j; if (!j.error) pageCache[key] = { t: Date.now(), v: j };
+  } catch (e) { pageRes = { error: '수집기에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' }; }
+  pageBusy = false; renderPage();
+}
+const pathStoreSeries = (q) => keys.map((k) => { const m = D.months[k]; const p = (m.pages || []).find((x) => x.pagePath === q); return { month: k, ok: !isGap(m), views: p ? p.screenPageViews : null, users: p ? p.activeUsers : null }; });
+function renderPage() {
+  const opts = keys.slice().reverse().filter((k) => !isGap(D.months[k])).map((k) => `<option value="${k}" ${k === pageM ? 'selected' : ''}>${k.slice(0, 4)}년 ${+k.slice(5)}월</option>`).join('');
+  const lm = D.months[keys[keys.length - 1]] || {};
+  const topPages = (lm.pages || []).slice(0, 8).map((p) => p.pagePath);
+  const topGoods = (lm.goods || []).slice(0, 5).map((g) => [g.id, (D.names && D.names.goods && D.names.goods[g.id]) || '상품 #' + g.id]);
+  const box = `<div class="card"><h2>페이지 분석 <span style="color:var(--sub);font-size:0.75rem;font-weight:400">특정 페이지·상품 하나의 조회·유입·전환을 따로 봅니다</span></h2>
+    <form class="sbox" id="pgForm"><input type="search" id="pgQ" value="${esc(pageQ)}" placeholder="경로·주소 일부·상품번호  예) /dbk/dbk_estimate_form.php · goodsNo=11166 · /huawei/" aria-label="페이지 검색어" list="pgList" autocomplete="off"><datalist id="pgList">${topPages.map((p) => `<option value="${esc(p)}">`).join('')}</datalist>
+    <select id="pgM" aria-label="월">${opts}</select><button class="btn pri" type="submit">조회</button></form>
+    <div class="chips">${topPages.map((p) => `<button data-q="${esc(p)}" title="${esc(p)}">${esc(p)}</button>`).join('')}${topGoods.map(([id, t]) => `<button data-q="goodsNo=${esc(id)}" title="${esc(t)}">🛒 ${esc(t)}</button>`).join('')}</div>
+    <p class="hint">검색어가 <b>들어 있는 모든 주소</b>(쿼리 포함)를 합쳐 봅니다. 예: <code>goodsNo=11166</code> 은 그 상품 상세 페이지, <code>/huawei/</code> 는 화웨이 하위 페이지 전체. 결과는 수집기가 직접 GA4에서 가져와 몇 분간 캐시합니다(조회가 몰리면 잠시 쉴 수 있음).</p></div>`;
+  let body = '';
+  if (!pageQ) body = '<div class="card"><div class="empty">위에서 페이지를 고르거나 주소·상품번호를 입력해 조회하세요.</div></div>';
+  else if (pageBusy || !pageRes) body = '<div class="card"><div class="empty">GA4에서 가져오는 중…</div></div>';
+  else if (pageRes.offline || pageRes.error) {
+    const why = pageRes.offline ? '이 화면에는 수집기 주소가 없어 실시간 조회를 할 수 없습니다(로컬 빌드). 저장된 상위 50개 페이지 데이터로만 보여 드립니다.' : esc(pageRes.error);
+    const ser = pathStoreSeries(pageQ), has = ser.some((r) => r.views != null);
+    body = `<div class="card"><div class="note" style="margin-bottom:0.75rem">${why}</div>${has ? `<div class="tw"><table><thead><tr><th>월</th><th class="n">조회수</th><th class="n">방문자</th></tr></thead><tbody>${ser.filter((r) => r.ok).map((r) => `<tr><td>${r.month}</td><td class="n">${fmt(r.views)}</td><td class="n">${fmt(r.users)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">저장된 상위 페이지에 없는 주소입니다.</div>'}</div>`;
+  } else body = pageResult(pageRes);
+  $('main').innerHTML = box + body;
+  $('pgForm').onsubmit = (e) => { e.preventDefault(); openPage($('pgQ').value, $('pgM').value); };
+  $('pgM').onchange = () => { if (pageQ) openPage(pageQ, $('pgM').value); else pageM = $('pgM').value; };
+  document.querySelectorAll('.chips [data-q]').forEach((b) => b.onclick = () => openPage(b.dataset.q));
+  document.querySelectorAll('tr[data-mm]').forEach((r) => r.onclick = () => openPage(pageQ, r.dataset.mm));
+  if (pageRes && pageRes.daily) bindDaily();
+}
+function pageResult(r) {
+  const t = r.total || {}, views = t.screenPageViews || 0;
+  if (!views) return `<div class="card"><div class="empty">“${esc(r.q)}” 이(가) 포함된 페이지의 ${r.month} 조회 기록이 없습니다.<br>주소 일부나 상품번호를 확인해 보세요.</div></div>`;
+  const days = r.partial ? +new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(8) : new Date(+r.month.slice(0, 4), +r.month.slice(5), 0).getDate();
+  const dmap = {}; (r.daily || []).forEach((x) => (dmap[x.date] = x));
+  const dates = Array.from({ length: days }, (_, i) => `${r.month}-${String(i + 1).padStart(2, '0')}`);
+  const sv = dates.map((d) => (dmap[d] ? dmap[d].screenPageViews : 0));
+  const ratio = t.activeUsers ? views / t.activeUsers : 0;
+  const warn = ratio > SUSP_RATIO && views > SUSP_MIN_PV ? `<div class="note">⚠ 방문자 1명당 조회수가 ${ratio.toFixed(1)}배입니다. 내부 새로고침·자동 접속일 수 있습니다(회사 IP 제외 설정 전 데이터에는 직원 접속이 섞여 있습니다).</div>` : '';
+  const kpis = [['조회수', fmt(views)], ['방문자', fmt(t.activeUsers)], ['세션', fmt(t.sessions)], ['처음 들어온 방문', fmt((r.entry || {}).sessions)], ['방문자당 체류시간', dur(t.activeUsers ? t.userEngagementDuration / t.activeUsers : 0)]].map(([l, v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+  const tbl = (head, rows) => rows.length ? `<table><thead><tr>${head.map((h, i) => `<th class="${i ? 'n' : ''}">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>` : '<div class="empty">데이터 없음</div>';
+  const mrows = (r.monthly || []).filter((x) => D.months[x.month] && !isGap(D.months[x.month])).slice(-14).reverse();
+  const mmx = Math.max(1, ...mrows.map((x) => x.screenPageViews));
+  const monthly = tbl(['월 (누르면 이동)', '조회수', '방문자'], mrows.map((x) => `<tr class="${x.month === r.month ? '' : 'go'}" ${x.month === r.month ? '' : `data-mm="${x.month}"`}><td>${x.month}${x.month === r.month ? ' ◀' : ''}<span class="sh" style="width:${Math.max(2, x.screenPageViews / mmx * 100)}%"></span></td><td class="n">${fmt(x.screenPageViews)}</td><td class="n">${fmt(x.activeUsers)}</td></tr>`));
+  const smax = Math.max(1, ...(r.sources || []).map((x) => x.sessions));
+  const sources = tbl(['유입 매체', '세션', '조회수'], (r.sources || []).map((x) => `<tr><td><span class="tx" title="${esc(x.sessionSourceMedium)}">${esc(x.sessionSourceMedium)}</span><span class="sh" style="width:${Math.max(2, x.sessions / smax * 100)}%"></span></td><td class="n">${fmt(x.sessions)}</td><td class="n">${fmt(x.screenPageViews)}</td></tr>`));
+  const devices = tbl(['기기', '방문자', '조회수'], (r.devices || []).map((x) => `<tr><td>${esc(x.deviceCategory)}</td><td class="n">${fmt(x.activeUsers)}</td><td class="n">${fmt(x.screenPageViews)}</td></tr>`));
+  const urls = tbl(['주소(쿼리 포함)', '조회수', '방문자'], (r.urls || []).map((x) => `<tr><td><span class="tx" title="${esc(x.pagePathPlusQueryString)}">${esc(x.pagePathPlusQueryString)}</span></td><td class="n">${fmt(x.screenPageViews)}</td><td class="n">${fmt(x.activeUsers)}</td></tr>`));
+  const events = tbl(['이벤트', '횟수'], (r.events || []).map((x) => `<tr><td>${esc(x.eventName)}</td><td class="n">${fmt(x.eventCount)}</td></tr>`));
+  const en = r.entry || { sessions: 0, conv: {}, byMedium: {} };
+  const convRows = (r.defs || []).map((d) => { const s = en.conv[d.id] || 0; const meds = (en.byMedium[d.id] || []).slice(0, 3).map((x) => `${esc(x.k)} ${fmt(x.s)}`).join(' · '); return `<tr><td>${esc(d.name)}</td><td class="n">${fmt(s)}</td><td class="n rate">${pct(s, en.sessions)}</td><td class="hm" style="color:var(--sub)">${meds || '―'}</td></tr>`; });
+  const conv = en.sessions ? `<table><thead><tr><th>전환</th><th class="n">전환 세션</th><th class="n">전환율</th><th class="hm">많이 전환한 유입</th></tr></thead><tbody>${convRows.join('')}</tbody></table><p class="hint">이 페이지로 <b>처음 들어온 방문</b> ${fmt(en.sessions)}회 중 전환 화면까지 간 세션입니다. 이 페이지를 거쳐 간 모든 전환이 아니라 “여기서 시작한” 전환입니다.</p>` : '<div class="empty">이 페이지로 처음 들어온 방문이 없어 전환율을 계산할 수 없습니다 (다른 페이지에서 넘어온 조회만 있음).</div>';
+  const errs = (r.errors || []).length ? `<div class="note">일부 항목을 가져오지 못했습니다: ${esc(r.errors.join(' / '))}</div>` : '';
+  const ago = r.at ? Math.max(0, Math.round((Date.now() - new Date(r.at)) / 60000)) : 0;
+  return `${warn}${errs}<div class="kpis">${kpis}</div>
+    <div class="card"><h2>일별 조회수 — “${esc(r.q)}” <span style="color:var(--sub);font-size:0.75rem;font-weight:400">${r.month}${r.partial ? ' (진행 중)' : ''} · ${ago < 1 ? '방금' : ago + '분 전'} 조회</span></h2>${dailyChart(sv, dates, '')}</div>
+    <div class="grid"><div class="card"><h2>월별 추이</h2><div class="tw">${monthly}</div></div><div class="card"><h2>유입 매체</h2><div class="tw">${sources}</div></div></div>
+    <div class="grid"><div class="card"><h2>전환 (이 페이지로 시작한 방문)</h2><div class="tw">${conv}</div></div><div class="card"><h2>기기</h2><div class="tw">${devices}</div></div></div>
+    <div class="grid"><div class="card"><h2>합쳐진 주소 (상위 15)</h2><div class="tw">${urls}</div></div><div class="card"><h2>이 페이지에서 발생한 이벤트</h2><div class="tw">${events}</div></div></div>`;
+}
+
 function render() {
   header();
+  $('navDash').classList.toggle('on', !isPage); $('navPage').classList.toggle('on', isPage);
+  if (isPage) { renderPage(); return; }
   if (!keys.length) { $('main').innerHTML = '<div class="empty">아직 수집된 데이터가 없습니다.<br>저장소의 Actions에서 “Update Dashboard”를 실행하면 첫 수집이 시작됩니다.</div>'; return; }
   if (/^\d{4}$/.test(sel)) renderYear(sel); else renderMonth(sel);
 }
@@ -596,8 +761,9 @@ async function pollCur() {
 if (liveUrl) { renderLive(null); pollLive(); pollCur(); setInterval(pollLive, 15000); setInterval(pollCur, 300000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { pollLive(); pollCur(); } }); }
 let rzT, rzW = 0;
 addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const w = $('main').clientWidth; if (!keys.length || Math.abs(w - rzW) < 24) return; rzW = w; const y = scrollY; render(); scrollTo(0, y); }, 200); });
-addEventListener('hashchange', () => { const s = location.hash.slice(1); if (s && s !== sel && (D.months[s] || years.includes(s))) { sel = s; render(); } });
+addEventListener('hashchange', () => { if (readHash()) { if (!pageM) pageM = keys[keys.length - 1] || ''; render(); if (pageQ) loadPage(); return; } const s = location.hash.slice(1); if (s && (D.months[s] || years.includes(s))) { sel = s; render(); } else if (isPage === false && !s) render(); });
 render();
+if (isPage && pageQ) loadPage();
 </script>
 </body>
 </html>

@@ -18,7 +18,17 @@ const CFG = {
   TOP_ROWS: 50,
   FILE_NAME: 'itket-analytics-data.json',
   BUDGET_MS: 4.5 * 60 * 1000,                // 한 번 실행에 쓸 최대 시간(6분 제한 대비)
-  SCHEMA: 2,                                 // 수집 항목이 바뀌면 올린다 → 과거 월을 다시 채움
+  SCHEMA: 3,                                 // 수집 항목이 바뀌면 올린다 → 과거 월을 다시 채움 (3: 전환·이벤트·랜딩 추가)
+  MEASUREMENT_ID: 'G-EJ5SHHZPND',            // 참고용(데이터 스트림 식별). 수집에는 PROPERTY_ID 를 쓴다
+  // 전환 정의: 이 화면(경로)을 본 세션을 "전환"으로 센다. 사이트가 전환 이벤트를 보내지 않아 화면 기준으로 센다.
+  // 바꾸려면 여기만 고치고 SCHEMA 숫자를 올린다. path 는 정확히 일치해야 한다.
+  CONVERSIONS: [
+    { id: 'estimate', name: '견적 요청 완료', path: '/dbk/dbk_estimate_complete.php' },
+    { id: 'signup', name: '회원가입 완료', path: '/member/join_ok.php' },
+    { id: 'order', name: '주문 완료', path: '/order/order_end.php' },
+  ],
+  PAGE_MAX_PER_10MIN: 40,                    // 페이지 분석(?mode=page) 새 조회 한도 — 남용·한도 소진 방지
+  PAGE_CACHE_SEC: 600,                       // 페이지 분석 결과 캐시(당월). 지난 달은 1시간
   LIVE_CACHE_SEC: 30,                        // ① 접속자 수 갱신 간격(실측 34토큰/회) — 남은 한도가 충분할 때
   LIVE_COOLDOWN_SEC: 300,                    // 한도 오류 직후 API 재호출을 쉬는 시간
   LIVE_MID_SEC: 180,                         // ② 지금 보는 페이지 + 분당 그래프(2회 약 70토큰) 기본 간격
@@ -96,6 +106,74 @@ function signupsOf_(range) {
   return { source: 'join_ok', rows: pv.map((r) => ({ date: ymd_(r.date), count: r.activeUsers })) };
 }
 
+/** 선택 항목: 실패해도 월 수집 전체를 막지 않는다(한도 오류는 그대로 올려 다음에 재시도). */
+function opt_(fn, fallback) {
+  try { return fn(); }
+  catch (e) { if (/Exhausted|quota/i.test(String((e && e.message) || e))) throw e; return fallback; }
+}
+const convPaths_ = () => CFG.CONVERSIONS.map((d) => d.path);
+const convFilter_ = () => ({ filter: { fieldName: 'pagePath', inListFilter: { values: convPaths_() } } });
+const convIdOf_ = (path) => { const d = CFG.CONVERSIONS.filter((x) => x.path === path)[0]; return d && d.id; };
+const bySessions_ = { orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 2000 };
+/** 랜딩 URL → 묶음 키. 상품 상세는 상품번호로, 나머지는 경로로 묶는다. */
+function landKey_(u) {
+  u = String(u);
+  const g = /[?&]goodsNo=(\d+)/.exec(u);
+  if (g && u.indexOf('goods_view') >= 0) return 'goods:' + g[1];
+  return u.split('?')[0];
+}
+
+/** 전환(정의된 화면을 본 세션) 집계: 전체·일별·유입 매체·채널·캠페인·랜딩 페이지·상품. n = 같은 키의 전체 세션(전환율 계산용). */
+function convStats_(range) {
+  const out = { defs: CFG.CONVERSIONS.map((d) => ({ id: d.id, name: d.name, path: d.path })), total: {}, daily: {}, byMedium: {}, byChannel: {}, byCampaign: {}, byLanding: {}, byGoods: {} };
+  const ids = CFG.CONVERSIONS.map((d) => d.id);
+  ids.forEach((id) => { out.total[id] = { sessions: 0, users: 0 }; out.daily[id] = []; ['byMedium', 'byChannel', 'byCampaign', 'byLanding', 'byGoods'].forEach((b) => (out[b][id] = [])); });
+  const cf = convFilter_();
+  q_(['pagePath'], ['sessions', 'activeUsers'], range, { dimensionFilter: cf }).forEach((r) => {
+    const id = convIdOf_(r.pagePath); if (id) out.total[id] = { sessions: r.sessions, users: r.activeUsers };
+  });
+  q_(['date', 'pagePath'], ['sessions'], range, { dimensionFilter: cf, orderBys: [{ dimension: { dimensionName: 'date' } }] }).forEach((r) => {
+    const id = convIdOf_(r.pagePath); if (id) out.daily[id].push({ date: ymd_(r.date), count: r.sessions });
+  });
+  const by = (bucket, dims) => {
+    const key = (r) => dims.map((d) => r[d]).join(' | ');
+    const base = {};
+    q_(dims, ['sessions'], range, bySessions_).forEach((r) => (base[key(r)] = r.sessions));
+    const acc = {};
+    q_(['pagePath'].concat(dims), ['sessions'], range, Object.assign({ dimensionFilter: cf }, bySessions_)).forEach((r) => {
+      const id = convIdOf_(r.pagePath); if (!id) return;
+      (acc[id] = acc[id] || []).push({ k: key(r), s: r.sessions, n: base[key(r)] || 0 });
+    });
+    ids.forEach((id) => (out[bucket][id] = (acc[id] || []).slice(0, 30)));
+  };
+  by('byMedium', ['sessionSourceMedium']);
+  by('byChannel', ['sessionDefaultChannelGroup']);
+  by('byCampaign', ['sessionCampaignName', 'sessionSourceMedium']);
+  // 랜딩(첫 진입) 페이지 기준: 어느 페이지로 들어온 방문이 전환했는가. 상품 상세는 상품번호로 묶는다.
+  const baseL = {};
+  q_(['landingPagePlusQueryString'], ['sessions'], range, { orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 5000 }).forEach((r) => {
+    const k = landKey_(r.landingPagePlusQueryString); baseL[k] = (baseL[k] || 0) + r.sessions;
+  });
+  const accL = {};
+  q_(['pagePath', 'landingPagePlusQueryString'], ['sessions'], range, { dimensionFilter: cf, orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: 5000 }).forEach((r) => {
+    const id = convIdOf_(r.pagePath); if (!id) return;
+    const k = landKey_(r.landingPagePlusQueryString), m = (accL[id] = accL[id] || {});
+    m[k] = (m[k] || 0) + r.sessions;
+  });
+  ids.forEach((id) => {
+    const rows = Object.keys(accL[id] || {}).map((k) => ({ k: k, s: accL[id][k], n: baseL[k] || 0 })).sort((a, b) => b.s - a.s);
+    out.byGoods[id] = rows.filter((r) => r.k.indexOf('goods:') === 0).slice(0, 50).map((r) => ({ k: r.k.slice(6), s: r.s, n: r.n }));
+    out.byLanding[id] = rows.filter((r) => r.k.indexOf('goods:') !== 0).slice(0, 30);
+  });
+  return out;
+}
+
+/** GA4 이커머스 이벤트(상품 노출·장바구니·구매)가 오는 경우만 값이 있다. */
+function ecomStats_(range) {
+  const rows = q_(['itemName'], ['itemsViewed', 'itemsAddedToCart', 'itemsPurchased', 'itemRevenue'], range, { orderBys: [{ metric: { metricName: 'itemsViewed' }, desc: true }], limit: 50 });
+  return rows.filter((r) => r.itemName && r.itemName !== '(not set)').map((r) => ({ name: r.itemName, viewed: r.itemsViewed, cart: r.itemsAddedToCart, bought: r.itemsPurchased, revenue: r.itemRevenue }));
+}
+
 function collectMonth_(m, today, reuse) {
   const range = { startDate: m + '-01', endDate: m === today.slice(0, 7) ? today : lastDay_(m) };
   const top = (metric) => ({ orderBys: [{ metric: { metricName: metric }, desc: true }], limit: CFG.TOP_ROWS });
@@ -110,6 +188,14 @@ function collectMonth_(m, today, reuse) {
   // 무거운 조회: 재사용 가능한 최근 값이 있으면 다시 계산하지 않는다
   const fresh = reuse && reuse.goods && reuse.shopUpdated && (Date.now() - Date.parse(reuse.shopUpdated) < CFG.SHOP_REFRESH_MIN * 60000);
   const shop = fresh ? { goods: reuse.goods, categories: reuse.categories, boards: reuse.boards } : shopStats_(range);
+  const conv = opt_(() => convStats_(range), null);
+  const events = opt_(() => {
+    const ord = { orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }], limit: 40 };
+    try { return q_(['eventName'], ['eventCount', 'totalUsers', 'keyEvents'], range, ord); }
+    catch (e) { if (/Exhausted|quota/i.test(String(e && e.message || e))) throw e; return q_(['eventName'], ['eventCount', 'totalUsers'], range, ord); }
+  }, []);
+  const keyBySource = opt_(() => q_(['sessionSourceMedium'], ['sessions', 'keyEvents'], range, { orderBys: [{ metric: { metricName: 'keyEvents' }, desc: true }], limit: 30 }), []);
+  const ecom = opt_(() => ecomStats_(range), []);
   const t = total[0] || {};
   const pick = (r) => { const o = {}; M.forEach((k) => (o[k] = r[k] || 0)); return o; };
   return {
@@ -123,6 +209,8 @@ function collectMonth_(m, today, reuse) {
     campaigns: campaigns.filter((r) => r.sessionCampaignName && r.sessionCampaignName !== '(not set)' && r.sessionCampaignName !== '(direct)'),
     devices: devices,
     signups: sg.rows, signupSource: sg.source,   // 'event' = GA4 sign_up 이벤트, 'join_ok' = 가입 완료 화면(일별 방문자) 기준
+    conv: conv,                                   // 전환(정의된 화면 기준) — null 이면 이번 수집에서 실패
+    events: events, keyBySource: keyBySource.filter((r) => r.keyEvents > 0), ecom: ecom,   // GA4 이벤트 현황 / GA4 주요 이벤트 기준 전환 / 이커머스 상품 지표
     goods: shop.goods, categories: shop.categories, boards: shop.boards,
     shopUpdated: fresh ? reuse.shopUpdated : new Date().toISOString(),
   };
@@ -278,12 +366,61 @@ function staleLive_(why) {
   return o;
 }
 
-/** 웹앱: ?mode=live | ?mode=cur | (기본) 전체. */
+/** 특정 페이지 통계(?mode=page&q=경로/키워드&month=YYYY-MM). q 가 들어 있는 모든 URL(쿼리 포함)을 합쳐 본다.
+ *  예) /dbk/dbk_estimate_form.php · goodsNo=11166 · /huawei/ — 결과는 캐시하고, 새 조회는 10분에 PAGE_MAX_PER_10MIN 회까지만 허용한다. */
+function pageStats_(q, month) {
+  q = String(q || '').replace(/[\u0000-\u001f]/g, '').trim();
+  if (q.length < 2 || q.length > 120) return { error: '검색어는 2~120자로 입력해 주세요.' };
+  const today = todayKst_(), cur = today.slice(0, 7);
+  if (!/^\d{4}-\d{2}$/.test(month || '') || month < CFG.START_MONTH || month > cur) month = cur;
+  const cache = CacheService.getScriptCache();
+  const hex = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, q.toLowerCase()).map((b) => ('0' + (b & 255).toString(16)).slice(-2)).join('');
+  const ck = 'pg:' + month + ':' + hex;
+  const hit = cache.get(ck);
+  if (hit) return JSON.parse(hit);
+  const used = Number(cache.get('pgRate') || 0);
+  if (used >= CFG.PAGE_MAX_PER_10MIN) return { error: '조회가 몰려 잠시 쉬는 중입니다. 몇 분 뒤 다시 시도해 주세요.' };
+  cache.put('pgRate', String(used + 1), 600);
+  const range = { startDate: month + '-01', endDate: month === cur ? today : lastDay_(month) };
+  const F = { filter: { fieldName: 'pagePathPlusQueryString', stringFilter: { matchType: 'CONTAINS', value: q, caseSensitive: false } } };
+  const L = { andGroup: { expressions: [{ filter: { fieldName: 'landingPagePlusQueryString', stringFilter: { matchType: 'CONTAINS', value: q, caseSensitive: false } } }, convFilter_()] } };
+  const LF = { filter: { fieldName: 'landingPagePlusQueryString', stringFilter: { matchType: 'CONTAINS', value: q, caseSensitive: false } } };
+  const top = (metric, n) => ({ dimensionFilter: F, orderBys: [{ metric: { metricName: metric }, desc: true }], limit: n });
+  try {
+    const out = { q: q, month: month, at: new Date().toISOString(), partial: month === cur, errors: [] };
+    const part = (name, fn, fb) => { try { return fn(); } catch (e) { const msg = String((e && e.message) || e); if (/Exhausted|quota/i.test(msg)) throw e; out.errors.push(name + ': ' + msg.slice(0, 90)); return fb; } };
+    out.total = part('total', () => q_([], ['screenPageViews', 'activeUsers', 'sessions', 'userEngagementDuration'], range, { dimensionFilter: F })[0] || {}, {});
+    out.daily = part('daily', () => q_(['date'], ['screenPageViews', 'activeUsers'], range, { dimensionFilter: F, orderBys: [{ dimension: { dimensionName: 'date' } }] }).map((r) => ({ date: ymd_(r.date), screenPageViews: r.screenPageViews, activeUsers: r.activeUsers })), []);
+    out.monthly = part('monthly', () => q_(['yearMonth'], ['screenPageViews', 'activeUsers'], { startDate: CFG.START_MONTH + '-01', endDate: today }, { dimensionFilter: F, orderBys: [{ dimension: { dimensionName: 'yearMonth' } }] }).map((r) => ({ month: r.yearMonth.slice(0, 4) + '-' + r.yearMonth.slice(4), screenPageViews: r.screenPageViews, activeUsers: r.activeUsers })), []);
+    out.sources = part('sources', () => q_(['sessionSourceMedium'], ['sessions', 'screenPageViews'], range, top('sessions', 10)), []);
+    out.devices = part('devices', () => q_(['deviceCategory'], ['activeUsers', 'screenPageViews'], range, top('screenPageViews', 5)), []);
+    out.urls = part('urls', () => q_(['pagePathPlusQueryString'], ['screenPageViews', 'activeUsers'], range, top('screenPageViews', 15)), []);
+    out.events = part('events', () => q_(['eventName'], ['eventCount'], range, top('eventCount', 10)), []);
+    // 이 페이지로 처음 들어온 방문(랜딩) 중 전환한 비율
+    out.entry = { sessions: 0, conv: {}, byMedium: {} };
+    part('entry', () => {
+      out.entry.sessions = (q_([], ['sessions'], range, { dimensionFilter: LF })[0] || {}).sessions || 0;
+      q_(['pagePath'], ['sessions'], range, { dimensionFilter: L }).forEach((r) => { const id = convIdOf_(r.pagePath); if (id) out.entry.conv[id] = r.sessions; });
+      q_(['pagePath', 'sessionSourceMedium'], ['sessions'], range, Object.assign({ dimensionFilter: L }, bySessions_)).forEach((r) => {
+        const id = convIdOf_(r.pagePath); if (!id) return;
+        const a = (out.entry.byMedium[id] = out.entry.byMedium[id] || []); if (a.length < 8) a.push({ k: r.sessionSourceMedium, s: r.sessions });
+      });
+    }, null);
+    out.defs = CFG.CONVERSIONS.map((d) => ({ id: d.id, name: d.name }));
+    cache.put(ck, JSON.stringify(out), month === cur ? CFG.PAGE_CACHE_SEC : 3600);
+    return out;
+  } catch (e) {
+    return { error: String((e && e.message) || e).slice(0, 200) };
+  }
+}
+
+/** 웹앱: ?mode=live | ?mode=cur | ?mode=page&q=..&month=.. | (기본) 전체. */
 function doGet(e) {
   const mode = e && e.parameter && e.parameter.mode;
   let body;
   try {
     if (mode === 'live') body = liveNow_();
+    else if (mode === 'page') body = pageStats_(e.parameter.q, e.parameter.month);
     else if (mode === 'cur') {
       const store = load_(), cur = todayKst_().slice(0, 7), prev = addMonth_(cur, -1);
       const months = {};
