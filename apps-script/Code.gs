@@ -456,3 +456,21 @@ function diagnose() {
   });
   Logger.log(out.join('\n'));
 }
+
+/**
+ * 진단용(에디터에서 직접 실행): GA4 데이터 필터(Internal Traffic)가 "테스트" 상태일 때 직원 접속이 얼마나 걸리는지 로그에 찍는다.
+ * 활성화하기 전에 걸리는 양이 합리적인지 확인하는 용도. 읽기 전용이며 웹앱 배포에는 영향이 없다.
+ */
+function checkInternalFilter() {
+  const today = todayKst_();
+  const range = { startDate: addMonth_(today.slice(0, 7), -1) + '-01', endDate: today };
+  const out = ['== 테스트 데이터 필터 확인 (' + range.startDate + ' ~ ' + range.endDate + ')'];
+  ['testDataFilterName', 'testDataFilterId'].forEach((dim) => {
+    try {
+      const rows = q_([dim], ['eventCount', 'activeUsers', 'sessions', 'screenPageViews'], range, { orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }], limit: 10 });
+      out.push('-- ' + dim);
+      rows.forEach((r) => out.push('   ' + r[dim] + ' | 이벤트 ' + r.eventCount + ' | 방문자 ' + r.activeUsers + ' | 세션 ' + r.sessions + ' | 조회 ' + r.screenPageViews));
+    } catch (e) { out.push('-- ' + dim + ' 조회 실패: ' + String((e && e.message) || e).slice(0, 120)); }
+  });
+  Logger.log(out.join('\n'));
+}
