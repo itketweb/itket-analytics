@@ -3,5 +3,10 @@
   "title": "아이티켓 애널리틱스",
   "siteUrl": "https://itket.com",
   "signupEvent": "sign_up",
-  "topRows": 50
+  "topRows": 50,
+  "measurementId": "G-EJ5SHHZPND",
+  "internalFilter": {
+    "state": "active",
+    "since": "2026-10-15"
+  }
 }

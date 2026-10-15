@@ -18,7 +18,7 @@ const namesFile = path.join(DATA, 'names.json');
 const names = fs.existsSync(namesFile) ? JSON.parse(fs.readFileSync(namesFile, 'utf8')) : {};
 const refFile = path.join(DATA, 'ref', 'godomall-signups.json');
 const godoSignups = fs.existsSync(refFile) ? JSON.parse(fs.readFileSync(refFile, 'utf8')) : null;
-const payload = { names, godoSignups, title: cfg.title, siteUrl: cfg.siteUrl, meta, months, liveUrl: process.env.GA4_WEBAPP_URL || '' };
+const payload = { names, godoSignups, title: cfg.title, siteUrl: cfg.siteUrl, internal: cfg.internalFilter || { state: 'pending', since: null }, meta, months, liveUrl: process.env.GA4_WEBAPP_URL || '' };
 const json = JSON.stringify(payload).replace(/</g, '\u003c');
 const html = fs.readFileSync(path.join(here, 'site-template.html'), 'utf8').replace('"__DATA__"', () => json).replace(/__TITLE__/g, cfg.title);
 fs.mkdirSync(SITE, { recursive: true });
