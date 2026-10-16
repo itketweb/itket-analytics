@@ -26,6 +26,7 @@
     color: var(--sub);
     letter-spacing: 0.04em;
     padding: 0 0.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .sfoot {
@@ -231,6 +232,10 @@
 .cont {
   padding: 2rem;
   width: 100%;
+}
+
+#liveBox {
+  margin-bottom: 1rem;
 }
 
 main {

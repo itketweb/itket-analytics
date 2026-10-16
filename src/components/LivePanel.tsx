@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { LivePayload } from '../types/analytics';
+import { useLivePolling } from '../hooks/useLivePolling';
 import { agoText, computeOdometer, fmt } from '../utils/format';
 
 interface LivePanelProps {
   liveUrl: string;
 }
 
-const IDLE_MS = 15 * 60 * 1000;
 const DEVICE_LABELS: Record<string, string> = {
   desktop: 'PC',
   mobile: '모바일',
@@ -14,107 +12,16 @@ const DEVICE_LABELS: Record<string, string> = {
 };
 
 export function LivePanel({ liveUrl }: LivePanelProps) {
-  const [live, setLive] = useState<LivePayload | null>(null);
-  const [err, setErr] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const [rollFrom, setRollFrom] = useState<number | null>(null);
-  const [deltaInfo, setDeltaInfo] = useState<{ d: number; until: number } | null>(null);
-  const [nowMs, setNowMs] = useState(() => Date.now());
-
-  const lastActRef = useRef(Date.now());
-  const lastLiveOkRef = useRef(0);
-  const lastLiveRef = useRef<LivePayload | null>(null);
-  const pausedRef = useRef(false);
-
-  const pollLive = useCallback(async () => {
-    if (!liveUrl || document.visibilityState === 'hidden') return;
-    if (Date.now() - lastActRef.current > IDLE_MS) {
-      if (!pausedRef.current) {
-        pausedRef.current = true;
-        setPaused(true);
-      }
-      return;
-    }
-    try {
-      const r = await fetch(`${liveUrl}?mode=live`);
-      const j = (await r.json()) as LivePayload;
-      if (j.error || typeof j.activeUsers !== 'number') {
-        throw new Error(j.error || 'bad live payload');
-      }
-      lastLiveOkRef.current = Date.now();
-      const prev = lastLiveRef.current;
-      if (prev && prev.at === j.at && Boolean(prev.stale) === Boolean(j.stale)) {
-        return;
-      }
-      if (!prev || prev.at !== j.at) {
-        if (
-          prev &&
-          typeof prev.activeUsers === 'number' &&
-          j.activeUsers !== prev.activeUsers
-        ) {
-          setDeltaInfo({
-            d: j.activeUsers - prev.activeUsers,
-            until: Date.now() + 15000,
-          });
-          setRollFrom(prev.activeUsers);
-          setTimeout(() => setRollFrom(null), 700);
-        } else {
-          setRollFrom(null);
-        }
-        lastLiveRef.current = j;
-      }
-      setErr(false);
-      setLive(j);
-    } catch {
-      if (!lastLiveOkRef.current) {
-        setErr(true);
-      }
-    }
-  }, [liveUrl]);
-
-  useEffect(() => {
-    if (!liveUrl) return;
-    pollLive();
-    const pollTimer = setInterval(pollLive, 15000);
-    const tickTimer = setInterval(() => {
-      const now = Date.now();
-      setNowMs(now);
-      setDeltaInfo((cur) => (cur && cur.until <= now ? null : cur));
-    }, 1000);
-
-    const onVis = () => {
-      if (document.visibilityState === 'visible') {
-        pollLive();
-      }
-    };
-    const onAct = () => {
-      lastActRef.current = Date.now();
-      if (pausedRef.current) {
-        pausedRef.current = false;
-        setPaused(false);
-        pollLive();
-      }
-    };
-
-    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'] as const;
-    events.forEach((ev) => window.addEventListener(ev, onAct, { passive: true }));
-    document.addEventListener('visibilitychange', onVis);
-
-    return () => {
-      clearInterval(pollTimer);
-      clearInterval(tickTimer);
-      events.forEach((ev) => window.removeEventListener(ev, onAct));
-      document.removeEventListener('visibilitychange', onVis);
-    };
-  }, [liveUrl, pollLive]);
+  const { live, err, paused, rollFrom, deltaInfo, nowMs } =
+    useLivePolling(liveUrl);
 
   if (!liveUrl) {
-    return <div id="liveBox" style={{ marginBottom: '1rem' }} />;
+    return <div id="liveBox" />;
   }
 
   if (paused) {
     return (
-      <div id="liveBox" style={{ marginBottom: '1rem' }}>
+      <div id="liveBox">
         <div className="live">
           <div>
             <div className="l lh">
@@ -131,7 +38,7 @@ export function LivePanel({ liveUrl }: LivePanelProps) {
 
   if (!live) {
     return (
-      <div id="liveBox" style={{ marginBottom: '1rem' }}>
+      <div id="liveBox">
         <div className="live">
           <div>
             <div className="l lh">
@@ -153,16 +60,22 @@ export function LivePanel({ liveUrl }: LivePanelProps) {
   const mx = Math.max(1, ...mins);
 
   const dev = (live.devices || [])
-    .map((r) => `${DEVICE_LABELS[r.deviceCategory] || r.deviceCategory} ${fmt(r.activeUsers)}`)
+    .map(
+      (r) =>
+        `${DEVICE_LABELS[r.deviceCategory] || r.deviceCategory} ${fmt(r.activeUsers)}`,
+    )
     .join(' · ');
 
-  const ago = Math.max(0, Math.round((nowMs - new Date(live.at).getTime()) / 1000));
+  const ago = Math.max(
+    0,
+    Math.round((nowMs - new Date(live.at).getTime()) / 1000),
+  );
   const showDelta = deltaInfo && deltaInfo.until > nowMs;
   const odoDigits =
     rollFrom != null ? computeOdometer(rollFrom, live.activeUsers) : null;
 
   return (
-    <div id="liveBox" style={{ marginBottom: '1rem' }}>
+    <div id="liveBox">
       <div className="live">
         <div>
           <div className="l lh">
@@ -240,7 +153,7 @@ export function LivePanel({ liveUrl }: LivePanelProps) {
               ))
             ) : (
               <li>
-                <span style={{ color: 'var(--sub)' }}>지금 보는 페이지 없음</span>
+                <span className="muted">지금 보는 페이지 없음</span>
               </li>
             )}
           </ul>

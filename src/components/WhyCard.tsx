@@ -1,15 +1,13 @@
 export function WhyCard() {
   return (
-    <details className="card" style={{ marginTop: '1rem' }}>
-      <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-        고도몰 통계와 수치가 다른 이유 · 읽는 법
-      </summary>
-      <div style={{ marginTop: '0.75rem', fontSize: '0.875rem' }}>
-        <p style={{ margin: 0 }}>
+    <details className="card why-card">
+      <summary>고도몰 통계와 수치가 다른 이유 · 읽는 법</summary>
+      <div className="why-body">
+        <p className="why-intro">
           이 화면은 <b>Google Analytics 4(GA4)</b> 기준입니다. 고도몰{' '}
           <b>통계 → 애널리틱스</b>는 NHN커머스가 따로 집계하므로 같은 사이트라도 숫자가 조금 다릅니다. 2026년 8~10월을 직접 대조한 결과입니다.
         </p>
-        <div className="tw" style={{ marginTop: '0.5rem' }}>
+        <div className="tw why-tw">
           <table>
             <thead>
               <tr>
@@ -42,16 +40,10 @@ export function WhyCard() {
             </tbody>
           </table>
         </div>
-        <p style={{ margin: '0.75rem 0 0' }}>
+        <p className="section-gap">
           <b>오차가 생기는 이유</b>
         </p>
-        <ol
-          style={{
-            margin: '0.5rem 0 0',
-            paddingLeft: '1.25rem',
-            lineHeight: 1.7,
-          }}
-        >
+        <ol className="why-list">
           <li>
             <b>방문자를 세는 방식</b> — 고도몰은 날마다 온 방문자를 더합니다. GA4 기본값은 한 달 동안 같은 사람을 한 번만 셉니다. 이 화면은 고도몰 방식(일별 합)으로 맞췄고, 중복을 뺀{' '}
             <i>순 방문자</i>는 카드 아래에 따로 보여 줍니다. (이것만으로 격차가 16~19% → 10~15%로 줄었습니다.)
@@ -67,7 +59,7 @@ export function WhyCard() {
             <b>집계 시차</b> — GA4 표준 보고서는 처리 지연이 있어 최근 몇 시간 값이 나중에 조금 바뀔 수 있습니다. 고도몰도 당일은 집계 중입니다. 접속자(실시간 패널)만 진짜 실시간입니다.
           </li>
         </ol>
-        <p style={{ margin: '0.75rem 0 0', color: 'var(--sub)' }}>
+        <p className="why-foot">
           추세와 순위는 두 통계가 같은 방향을 가리킵니다. 절대 숫자를 두 통계에서 맞대어 볼 때만 위 오차를 감안하세요.
         </p>
       </div>

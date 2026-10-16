@@ -38,6 +38,18 @@ button {
   display: none;
 }
 
+.muted {
+  color: var(--sub);
+}
+
+.warn-text {
+  color: var(--warn);
+}
+
+.section-gap {
+  margin-top: 0.75rem;
+}
+
 .flag {
   color: var(--warn);
   font-weight: 700;
@@ -48,6 +60,10 @@ button {
   font-size: 0.75rem;
   line-height: 1.6;
   margin: 0.5rem 0 0;
+
+  &.section-gap {
+    margin-top: 0.75rem;
+  }
 }
 
 .rate {
@@ -170,6 +186,20 @@ button {
   padding: 0.5rem 0.75rem;
   margin-bottom: 1rem;
   font-size: 0.875rem;
+
+  &.flex-note {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+
+  &.susp-note {
+    margin: 0.75rem 0 0;
+  }
+
+  &.mb-sm {
+    margin-bottom: 0.75rem;
+  }
 }
 
 svg {

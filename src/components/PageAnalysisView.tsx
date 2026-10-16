@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { usePageAnalysis } from '../hooks/usePageAnalysis';
 import type {
   MonthData,
   NamesMap,
@@ -7,8 +8,7 @@ import type {
 import { dur, fmt, pct } from '../utils/format';
 import { isGap, SUSP_MIN_PV, SUSP_RATIO } from '../utils/metrics';
 import { DailyChart } from './BarChart';
-
-const pageCache: Record<string, { t: number; v: PageAnalysisResult }> = {};
+import { ProgressBar } from './ProgressBar';
 
 interface PageAnalysisViewProps {
   pageQ: string;
@@ -32,67 +32,17 @@ export function PageAnalysisView({
   onChangeMonthOnly,
 }: PageAnalysisViewProps) {
   const [inputQ, setInputQ] = useState(pageQ);
-  const [pageRes, setPageRes] = useState<PageAnalysisResult | null>(null);
-  const [pageBusy, setPageBusy] = useState(false);
+  const { pageRes, pageBusy, fallbackSeries } = usePageAnalysis(
+    pageQ,
+    pageM,
+    liveUrl,
+    keys,
+    months,
+  );
 
   useEffect(() => {
     setInputQ(pageQ);
   }, [pageQ]);
-
-  useEffect(() => {
-    if (!pageQ) {
-      setPageRes(null);
-      setPageBusy(false);
-      return;
-    }
-
-    const q = pageQ;
-    const m = pageM;
-    const cacheKey = `${m}|${q.toLowerCase()}`;
-    if (pageCache[cacheKey] && Date.now() - pageCache[cacheKey].t < 120000) {
-      setPageRes(pageCache[cacheKey].v);
-      setPageBusy(false);
-      return;
-    }
-
-    if (!liveUrl) {
-      setPageRes({ offline: true });
-      setPageBusy(false);
-      return;
-    }
-
-    let cancelled = false;
-    setPageBusy(true);
-    setPageRes(null);
-
-    fetch(
-      `${liveUrl}?mode=page&month=${encodeURIComponent(m)}&q=${encodeURIComponent(q)}`,
-    )
-      .then((res) => res.json())
-      .then((j: PageAnalysisResult) => {
-        if (cancelled) return;
-        if (!j.error && !j.total) {
-          j.error =
-            '수집기(Apps Script)가 아직 새 버전이 아닙니다. README의 “수집기 업데이트” 순서대로 새 버전으로 배포하면 사용할 수 있습니다.';
-        }
-        if (!j.error) {
-          pageCache[cacheKey] = { t: Date.now(), v: j };
-        }
-        setPageRes(j);
-        setPageBusy(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setPageRes({
-          error: '수집기에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.',
-        });
-        setPageBusy(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pageQ, pageM, liveUrl]);
 
   const validMonths = keys
     .slice()
@@ -109,18 +59,6 @@ export function PageAnalysisView({
           (names && names.goods && names.goods[g.id]) || `상품 #${g.id}`,
         ] as const,
     );
-
-  const pathStoreSeries = (q: string) =>
-    keys.map((k) => {
-      const m = months[k];
-      const p = (m?.pages || []).find((x) => x.pagePath === q);
-      return {
-        month: k,
-        ok: !isGap(m),
-        views: p ? p.screenPageViews : null,
-        users: p ? p.activeUsers : null,
-      };
-    });
 
   const renderResult = (r: PageAnalysisResult) => {
     const t = r.total || {};
@@ -207,13 +145,7 @@ export function PageAnalysisView({
           <h2>
             <span>
               일별 조회수 — “{r.q || pageQ}”{' '}
-              <span
-                style={{
-                  color: 'var(--sub)',
-                  fontSize: '0.75rem',
-                  fontWeight: 400,
-                }}
-              >
+              <span className="sub-title">
                 {rMonth}
                 {r.partial ? ' (진행 중)' : ''} ·{' '}
                 {ago < 1 ? '방금' : `${ago}분 전`} 조회
@@ -250,12 +182,7 @@ export function PageAnalysisView({
                           <td>
                             {x.month}
                             {isCur ? ' ◀' : ''}
-                            <span
-                              className="sh"
-                              style={{
-                                width: `${Math.max(2, (x.screenPageViews / mmx) * 100)}%`,
-                              }}
-                            />
+                            <ProgressBar value={x.screenPageViews} max={mmx} />
                           </td>
                           <td className="n">{fmt(x.screenPageViews)}</td>
                           <td className="n">{fmt(x.activeUsers)}</td>
@@ -289,12 +216,7 @@ export function PageAnalysisView({
                           <span className="tx" title={x.sessionSourceMedium}>
                             {x.sessionSourceMedium}
                           </span>
-                          <span
-                            className="sh"
-                            style={{
-                              width: `${Math.max(2, (x.sessions / smax) * 100)}%`,
-                            }}
-                          />
+                          <ProgressBar value={x.sessions} max={smax} />
                         </td>
                         <td className="n">{fmt(x.sessions)}</td>
                         <td className="n">{fmt(x.screenPageViews)}</td>
@@ -336,9 +258,7 @@ export function PageAnalysisView({
                             <td>{d.name}</td>
                             <td className="n">{fmt(s)}</td>
                             <td className="n rate">{pct(s, en.sessions)}</td>
-                            <td className="hm" style={{ color: 'var(--sub)' }}>
-                              {meds || '―'}
-                            </td>
+                            <td className="hm muted">{meds || '―'}</td>
                           </tr>
                         );
                       })}
@@ -470,13 +390,10 @@ export function PageAnalysisView({
     const why = pageRes.offline
       ? '이 화면에는 수집기 주소가 없어 실시간 조회를 할 수 없습니다(로컬 빌드). 저장된 상위 50개 페이지 데이터로만 보여 드립니다.'
       : pageRes.error;
-    const ser = pathStoreSeries(pageQ);
-    const has = ser.some((r) => r.views != null);
+    const has = fallbackSeries.some((r) => r.views != null);
     bodyContent = (
       <div className="card">
-        <div className="note" style={{ marginBottom: '0.75rem' }}>
-          {why}
-        </div>
+        <div className="note mb-sm">{why}</div>
         {has ? (
           <div className="tw">
             <table>
@@ -488,7 +405,7 @@ export function PageAnalysisView({
                 </tr>
               </thead>
               <tbody>
-                {ser
+                {fallbackSeries
                   .filter((r) => r.ok)
                   .map((r) => (
                     <tr key={r.month}>
@@ -515,13 +432,7 @@ export function PageAnalysisView({
         <h2>
           <span>
             페이지 분석{' '}
-            <span
-              style={{
-                color: 'var(--sub)',
-                fontSize: '0.75rem',
-                fontWeight: 400,
-              }}
-            >
+            <span className="sub-title">
               특정 페이지·상품 하나의 조회·유입·전환을 따로 봅니다
             </span>
           </span>

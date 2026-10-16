@@ -106,13 +106,7 @@ export function YearView({
         <h2>
           <span>
             월별 요약{' '}
-            <span
-              style={{
-                color: 'var(--sub)',
-                fontSize: '0.75rem',
-                fontWeight: 400,
-              }}
-            >
+            <span className="sub-title">
               행을 누르면 해당 월로 이동 · 방문자는 일별 방문자의 합(고도몰 통계와 같은 방식) · * 는 방문 측정이 빠진 달에 고도몰 통계에서 직접 확인한 회원가입 수(참고용)
             </span>
           </span>
@@ -146,17 +140,11 @@ export function YearView({
                   >
                     <td>
                       {i + 1}월
-                      {m && m.partial && (
-                        <span style={{ color: 'var(--sub)' }}> (진행 중)</span>
-                      )}
+                      {m && m.partial && <span className="muted"> (진행 중)</span>}
                     </td>
                     {gap ? (
                       <>
-                        <td
-                          className="n"
-                          colSpan={4}
-                          style={{ color: 'var(--warn)' }}
-                        >
+                        <td className="n warn-text" colSpan={4}>
                           집계 없음 — 방문 측정이 빠진 구간(측정 누락 추정)
                         </td>
                         <td
@@ -173,11 +161,7 @@ export function YearView({
                         </td>
                       ))
                     ) : (
-                      <td
-                        className="n"
-                        colSpan={5}
-                        style={{ color: 'var(--sub)' }}
-                      >
+                      <td className="n muted" colSpan={5}>
                         ―
                       </td>
                     )}

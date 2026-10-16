@@ -1,6 +1,7 @@
 import type { MonthData, NamesMap, ShopTabKey } from '../types/analytics';
 import { fmt } from '../utils/format';
 import { shopItemName } from '../utils/metrics';
+import { ProgressBar } from './ProgressBar';
 import { SegmentedControl } from './SegmentedControl';
 
 const SHOP_TABS: Array<[ShopTabKey, string]> = [
@@ -33,7 +34,7 @@ export function ShopCard({
   const list = monthData[shopTab];
   if (!list) {
     return (
-      <div className="card" style={{ marginTop: '1rem' }}>
+      <div className="card mt">
         <h2>고도몰 인기 항목</h2>
         <div className="empty">
           이 달은 아직 집계 전입니다. 수집기가 과거 월을 순서대로 채우는 중이면 잠시 후 나타납니다.
@@ -48,18 +49,10 @@ export function ShopCard({
 
   return (
     <div className="card">
-      <h2 style={{ marginTop: 0 }}>
+      <h2>
         <span>
           고도몰 인기 항목{' '}
-          <span
-            style={{
-              color: 'var(--sub)',
-              fontSize: '0.75rem',
-              fontWeight: 400,
-            }}
-          >
-            쇼핑몰 URL 기준 조회수
-          </span>
+          <span className="sub-title">쇼핑몰 URL 기준 조회수</span>
         </span>
         <SegmentedControl
           items={SHOP_TABS}
@@ -97,12 +90,7 @@ export function ShopCard({
                       <span className="tx" title={displayName}>
                         {displayName}
                       </span>
-                      <span
-                        className="sh"
-                        style={{
-                          width: `${Math.max(2, (r.views / mx) * 100)}%`,
-                        }}
-                      />
+                      <ProgressBar value={r.views} max={mx} />
                     </td>
                     <td className="hm">{r.id}</td>
                     <td className="n">{fmt(r.views)}</td>

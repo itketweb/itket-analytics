@@ -114,9 +114,7 @@ export function Sidebar({
         </div>
 
         <div className="sy">
-          <div className="lbl" style={{ marginBottom: '0.5rem' }}>
-            연도
-          </div>
+          <div className="lbl">연도</div>
           <div className="years" id="years">
             {years.map((y) => (
               <button
@@ -132,9 +130,7 @@ export function Sidebar({
         </div>
 
         <div className="sm">
-          <div className="lbl" style={{ marginBottom: '0.5rem' }}>
-            기간
-          </div>
+          <div className="lbl">기간</div>
           <nav className="mons" id="mons" ref={monsRef}>
             {currentYear && (
               <button

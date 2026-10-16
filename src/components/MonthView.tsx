@@ -21,6 +21,7 @@ import {
 import { DailyChart } from './BarChart';
 import { ConversionSection } from './ConversionSection';
 import { DeltaBadge } from './DeltaBadge';
+import { ProgressBar } from './ProgressBar';
 import { SegmentedControl } from './SegmentedControl';
 import { ShopCard } from './ShopCard';
 import { WhyCard } from './WhyCard';
@@ -96,10 +97,7 @@ export function MonthView({
   return (
     <>
       {showInternalNote && (
-        <div
-          className="note"
-          style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}
-        >
+        <div className="note flex-note">
           <span className="tag warn">내부 IP</span>
           <span>
             {st === 'active' && since ? (
@@ -156,8 +154,7 @@ export function MonthView({
               )}
               {key === 'activeUsers' && (
                 <div
-                  className="l sub1"
-                  style={{ marginTop: '0.25rem' }}
+                  className="l sub1 sub-top"
                   title="한 달 동안 같은 사람을 한 번만 센 값(GA4 기본 방식)입니다. 위 값은 고도몰 통계와 같이 '날마다 온 사람'을 더한 값입니다."
                 >
                   순 방문자 {fmt(m.total.activeUsers)}
@@ -165,8 +162,7 @@ export function MonthView({
               )}
               {key === 'screenPageViews' && sp.excess > 0 && (
                 <div
-                  className="l sub1"
-                  style={{ marginTop: '0.25rem', color: 'var(--warn)' }}
+                  className="l sub1 sub-warn"
                   title={`방문자 1명당 조회수가 ${SUSP_RATIO}배를 넘는 페이지의 초과분(내부 새로고침 의심)을 뺀 추정값입니다. 고도몰 통계와 비교할 때 참고하세요.`}
                 >
                   ⚠ 의심분 제외 ≈ {fmt(cur - sp.excess)}
@@ -174,8 +170,7 @@ export function MonthView({
               )}
               {key === 'signups' && m.signupSource === 'join_ok' && (
                 <div
-                  className="l"
-                  style={{ marginTop: '2px' }}
+                  className="l sub-tight"
                   title="이 사이트는 가입 완료 시 GA4 sign_up 이벤트를 보내지 않아, 가입 완료 화면(/member/join_ok.php)을 본 사용자 수를 세었습니다. 고도몰 통계와 비교해 보세요."
                 >
                   가입 완료 화면 기준
@@ -249,19 +244,17 @@ export function MonthView({
                         <span className="tx" title={p.pagePath}>
                           {isSusp && (
                             <>
-                              <span className="flag" title="방문자 대비 조회수 과다">
+                              <span
+                                className="flag"
+                                title="방문자 대비 조회수 과다"
+                              >
                                 ⚠
                               </span>{' '}
                             </>
                           )}
                           {p.pagePath}
                         </span>
-                        <span
-                          className="sh"
-                          style={{
-                            width: `${Math.max(2, (p.screenPageViews / pmax) * 100)}%`,
-                          }}
-                        />
+                        <ProgressBar value={p.screenPageViews} max={pmax} />
                       </td>
                       <td className="n">{fmt(p.screenPageViews)}</td>
                       <td className="n">{fmt(p.activeUsers)}</td>
@@ -282,7 +275,7 @@ export function MonthView({
           )}
         </div>
         {sp.list.length > 0 && (
-          <div className="note" style={{ margin: '0.75rem 0 0' }}>
+          <div className="note susp-note">
             ⚠ 표시된 페이지는 방문자 1명당 조회수가 {SUSP_RATIO}배를 넘어 내부 새로고침·자동 접속일 수 있습니다. 초과분 약 {fmt(sp.excess)}뷰(이 달 전체 페이지뷰의{' '}
             {((sp.excess / Math.max(1, m.total.screenPageViews)) * 100).toFixed(0)}
             %)를 빼면 고도몰 통계와 거의 같아집니다. 고도몰은 이런 조회를 제외하는 것으로 보입니다.
