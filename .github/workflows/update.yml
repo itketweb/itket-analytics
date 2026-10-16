@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['scripts/**', 'config/**']
+    paths: ['scripts/**', 'config/**', 'src/**', 'index.html', 'vite.config.ts', 'package.json', 'yarn.lock', 'tsconfig*.json']
 
 permissions:
   contents: write
@@ -26,7 +26,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: yarn
+      - name: 의존성 설치
+        run: yarn install --frozen-lockfile
       - name: GA4 수집
         id: collect
         continue-on-error: true

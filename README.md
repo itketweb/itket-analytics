@@ -70,7 +70,7 @@ GA4 는 방문자 IP 를 API 로 내려 주지 않아 **대시보드·수집기�
 | `scripts/resolve-names.mjs` | 상품번호·카테고리·게시판 ID → 이름 (공개 페이지에서 조회·캐시) |
 | `scripts/collect.mjs` | 웹앱 JSON 을 받아 월별 파일로 저장 (대체 경로: 서비스 계정으로 GA4 직접 수집) |
 | `scripts/ga4.mjs` | 서비스 계정 방식용 GA4 Data API 클라이언트(의존성 없음) |
-| `scripts/build-site.mjs`, `scripts/site-template.html` | 대시보드 생성 |
+| `scripts/build-site.mjs`, `vite.config.ts`, `src/` | 대시보드 생성 (React + TypeScript + SCSS + Vite) |
 | `.github/workflows/update.yml` | 3시간마다 수집→생성→커밋, 실패 시 이슈 |
 | `data/ga4/*.json` | 월별 원본 데이터(이력) |
 
@@ -179,4 +179,4 @@ GA4 Data API 는 **프로젝트·속성당 시간당 14,000토큰**(일 200,000)
 - **회원가입**: 이 사이트는 가입 완료 시 GA4 `sign_up` 이벤트를 보내지 않는다(2025년부터 0건 — 2026-10-14 확인). 그래서 **가입 완료 화면(`/member/join_ok.php`)을 본 사용자 수**(일별)를 가입 수로 쓴다. 나중에 사이트가 `sign_up` 이벤트를 보내기 시작하면 그 달부터 이벤트를 우선 사용한다(이중 집계 없음). 같은 사용자가 같은 날 완료 화면을 새로고침해도 1로 센다. 화면에는 "가입 완료 화면 기준"으로 표시된다.
   - 과거 월은 Apps Script 에서 `backfillSignups` 를 한 번 실행하면 채워진다.
 - 방문자(활성 사용자)는 월마다 중복 제거한 값이라 월을 더해도 연 방문자가 되지 않는다. 연간 화면은 이를 합산하지 않는다.
-- 로컬 확인(가짜 데이터): `npm run mock` → `.sample/site/index.html` (저장소에는 올라가지 않음)
+- 로컬 확인(가짜 데이터): `yarn mock` → `.sample/site/index.html` (저장소에는 올라가지 않음)
