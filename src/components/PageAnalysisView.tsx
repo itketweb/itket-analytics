@@ -10,7 +10,16 @@ import { isGap, SUSP_MIN_PV, SUSP_RATIO } from '../utils/metrics';
 import { DailyChart } from './BarChart';
 import { KpiCardsGrid } from './KpiCardsGrid';
 import { PageAnalysisDetails } from './PageAnalysisDetails';
+import { PageAnalysisSkeleton } from './PageAnalysisSkeleton';
+import { PageHeader } from './PageHeader';
 import { PageSearchCard } from './PageSearchCard';
+import { SecSrc, type SourceLinkItem } from './SecSrc';
+
+const PAGE_ANALYSIS_SOURCES: SourceLinkItem[] = [
+  { label: 'Google Analytics 4 API', href: 'https://analytics.google.com/' },
+  { label: '아이티켓 공식 스토어', href: 'https://itket.com' },
+  { label: 'URL·상품번호 실시간 검색 및 진입 세션별 전환율 집계 (10분 캐시)' },
+];
 
 interface PageAnalysisViewProps {
   pageQ: string;
@@ -21,6 +30,7 @@ interface PageAnalysisViewProps {
   liveUrl: string;
   onOpenPage: (query: string, month?: string) => void;
   onChangeMonthOnly: (month: string) => void;
+  onBackToDashboard?: () => void;
 }
 
 export function PageAnalysisView({
@@ -32,6 +42,7 @@ export function PageAnalysisView({
   liveUrl,
   onOpenPage,
   onChangeMonthOnly,
+  onBackToDashboard,
 }: PageAnalysisViewProps) {
   const [inputQ, setInputQ] = useState(pageQ);
   const { pageRes, pageBusy, fallbackSeries } = usePageAnalysis(
@@ -130,10 +141,18 @@ export function PageAnalysisView({
           </div>
         )}
 
-        <KpiCardsGrid items={kpiItems} />
+        <KpiCardsGrid
+          id="kpisPageAnalysis"
+          ariaLabel="페이지 분석 핵심 지표"
+          items={kpiItems}
+        />
 
-        <div className="card">
-          <h2>
+        <section
+          className="card card-page-daily-views"
+          id="sectionPageDailyViews"
+          aria-labelledby="headingPageDailyViews"
+        >
+          <h2 id="headingPageDailyViews">
             <span>
               일별 조회수 — “{r.q || pageQ}”{' '}
               <span className="sub-title">
@@ -144,7 +163,7 @@ export function PageAnalysisView({
             </span>
           </h2>
           <DailyChart vals={sv} dates={dates} unit="" />
-        </div>
+        </section>
 
         <PageAnalysisDetails
           result={r}
@@ -159,25 +178,21 @@ export function PageAnalysisView({
   let bodyContent: React.ReactNode = null;
   if (!pageQ) {
     bodyContent = (
-      <div className="card">
+      <section className="card card-empty" id="sectionPageEmpty">
         <div className="empty">
           위에서 페이지를 고르거나 주소·상품번호를 입력해 조회하세요.
         </div>
-      </div>
+      </section>
     );
   } else if (pageBusy || !pageRes) {
-    bodyContent = (
-      <div className="card">
-        <div className="empty">GA4에서 가져오는 중…</div>
-      </div>
-    );
+    bodyContent = <PageAnalysisSkeleton query={pageQ} />;
   } else if (pageRes.offline || pageRes.error) {
     const why = pageRes.offline
       ? '이 화면에는 수집기 주소가 없어 실시간 조회를 할 수 없습니다(로컬 빌드). 저장된 상위 50개 페이지 데이터로만 보여 드립니다.'
       : pageRes.error;
     const has = fallbackSeries.some((r) => r.views != null);
     bodyContent = (
-      <div className="card">
+      <section className="card card-page-fallback" id="sectionPageFallback">
         <div className="note mb-sm">{why}</div>
         {has ? (
           <div className="tw">
@@ -205,7 +220,7 @@ export function PageAnalysisView({
         ) : (
           <div className="empty">저장된 상위 페이지에 없는 주소입니다.</div>
         )}
-      </div>
+      </section>
     );
   } else {
     bodyContent = renderResult(pageRes);
@@ -213,6 +228,19 @@ export function PageAnalysisView({
 
   return (
     <>
+      <PageHeader
+        id="pageHeaderAnalysis"
+        eyebrow="PAGE INTELLIGENCE · 페이지 분석 리포트"
+        title="상세 페이지 성과 분석"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        }
+        meta={<span className="tag">실시간 API 연동</span>}
+      />
+
       <PageSearchCard
         inputQ={inputQ}
         pageM={pageM}
@@ -229,9 +257,12 @@ export function PageAnalysisView({
             onChangeMonthOnly(nextM);
           }
         }}
+        onBackToDashboard={onBackToDashboard}
       />
 
       {bodyContent}
+
+      <SecSrc sources={PAGE_ANALYSIS_SOURCES} />
     </>
   );
 }

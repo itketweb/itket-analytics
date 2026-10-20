@@ -16,11 +16,7 @@
   }
 
   .live {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-
-    > div:nth-child(3) {
-      grid-column: 1 / -1;
-    }
+    grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
   }
 
   .btn.ic {
@@ -162,29 +158,35 @@
       height: 1.25rem;
     }
 
-    &.pr {
-      display: none;
+    &.pr,
+    &.btn-excel {
+      padding: 0 0.5rem;
+
+      span {
+        display: none;
+      }
     }
   }
 
   .tgl {
-    width: 4rem;
-    height: 2.5rem;
-    border-radius: 1.25rem;
+    width: 3.5rem;
+    height: 2rem;
 
-    .k {
-      width: 2rem;
-      font-size: 1rem;
+    .tgl-icon {
+      width: 1.375rem;
+      height: 1.375rem;
     }
 
-    i {
-      width: 2rem;
-      height: 2rem;
-      top: 0.25rem;
-      left: 0.25rem;
+    i,
+    .tgl-thumb {
+      width: calc(2rem - 6px);
+      height: calc(2rem - 6px);
+      top: 2px;
+      left: 2px;
     }
 
-    &[aria-checked='true'] i {
+    &[aria-checked='true'] i,
+    &[aria-checked='true'] .tgl-thumb {
       transform: translateX(1.5rem);
     }
   }
@@ -255,6 +257,7 @@
     padding: 0.25rem;
   }
 
+  .years button,
   .y {
     padding: 0.75rem 0.75rem;
     font-size: 1rem;
@@ -303,10 +306,6 @@
     min-width: 0;
   }
 
-  .foot {
-    order: 4;
-    padding: 0.5rem 2rem calc(2rem + env(safe-area-inset-bottom));
-  }
 
   #liveBox {
     margin-bottom: 0.75rem !important;
@@ -348,6 +347,10 @@
     padding: 1rem;
     margin-bottom: 0.75rem;
 
+    &:last-child {
+      margin-bottom: 0;
+    }
+
     h2 {
       flex-direction: column;
       align-items: stretch;
@@ -388,25 +391,19 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
     margin-bottom: 0.75rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
   }
 
   .live {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 0.75rem;
+    gap: 1rem;
     padding: 1rem;
-
-    > div:nth-child(3) {
-      grid-column: 1 / -1;
-    }
 
     .n {
       font-size: 2rem;
-    }
-
-    svg {
-      flex: none;
-      min-height: 0;
-      height: 2.75rem;
     }
 
     li:nth-child(n + 4) {
@@ -436,7 +433,13 @@
       white-space: nowrap;
     }
 
-    th:first-child,
+    th:first-child {
+      position: sticky;
+      left: 0;
+      background: var(--side);
+      z-index: 2;
+    }
+
     td:first-child {
       position: sticky;
       left: 0;
@@ -462,18 +465,8 @@
   .live {
     grid-template-columns: minmax(0, 1fr);
 
-    > div:nth-child(3) {
-      grid-column: auto;
-    }
-
     .n {
       font-size: 2rem;
-    }
-
-    svg {
-      flex: none;
-      min-height: 0;
-      height: 2.5rem;
     }
   }
 

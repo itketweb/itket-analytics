@@ -1,12 +1,49 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 
-export function loadDashboardPayload() {
+/**
+ * 릴리즈 표기: 배포 날짜(KST) 기준 YY.MM.DD, 당일 여러 번 배포 시 -2, -3 ...
+ */
+function releaseInfo(): { tag: string; commit: string } {
+  const kstDay = (sec: number) =>
+    new Date(sec * 1000 + 9 * 3600 * 1000)
+      .toISOString()
+      .slice(2, 10)
+      .replace(/-/g, '.');
+
+  try {
+    const git = (cmd: string) =>
+      execSync(`git ${cmd}`, {
+        cwd: ROOT,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+        .toString()
+        .trim();
+
+    const [sha, headSec] = git('log -1 --format=%h%x20%ct').split(' ');
+    // 빌드 당일 KST 날짜
+    const today = kstDay(Date.now() / 1000);
+    const day = kstDay(Number(headSec)) === today ? today : today;
+    const n = git('log --first-parent --format=%ct HEAD')
+      .split('\n')
+      .filter((s) => kstDay(Number(s)) === day).length;
+
+    return { tag: `v${day}${n > 1 ? `-${n}` : ''}`, commit: sha };
+  } catch {
+    const today = kstDay(Date.now() / 1000);
+    return { tag: `v${today}`, commit: '' };
+  }
+}
+const release = releaseInfo();
+
+export function loadDashboardPayload(mode = process.env.NODE_ENV || 'development') {
+  const env = loadEnv(mode, ROOT, '');
   const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, 'data');
   const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'ga4.json'), 'utf8'));
   const ga4Dir = path.join(dataDir, 'ga4');
@@ -40,7 +77,7 @@ export function loadDashboardPayload() {
       internal: cfg.internalFilter || { state: 'pending', since: null },
       meta,
       months,
-      liveUrl: process.env.GA4_WEBAPP_URL || '',
+      liveUrl: process.env.GA4_WEBAPP_URL || env.GA4_WEBAPP_URL || '',
     },
   };
 }
@@ -58,8 +95,12 @@ function itketDataPlugin(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   base: './',
+  define: {
+    __APP_RELEASE__: JSON.stringify(command === 'serve' ? `${release.tag}-dev` : release.tag),
+    __APP_COMMIT__: JSON.stringify(release.commit),
+  },
   server: {
     port: 1000,
     strictPort: true,
@@ -80,4 +121,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

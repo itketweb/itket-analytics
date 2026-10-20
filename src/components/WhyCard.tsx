@@ -1,40 +1,40 @@
 export function WhyCard() {
   return (
-    <details className="card why-card">
+    <details className="card why-card" id="cardWhyGodoDiff">
       <summary>고도몰 통계와 수치가 다른 이유 · 읽는 법</summary>
       <div className="why-body">
         <p className="why-intro">
           이 화면은 <b>Google Analytics 4(GA4)</b> 기준입니다. 고도몰{' '}
-          <b>통계 → 애널리틱스</b>는 NHN커머스가 따로 집계하므로 같은 사이트라도 숫자가 조금 다릅니다. 2026년 8~10월을 직접 대조한 결과입니다.
+          <b>통계 → 애널리틱스</b>는 NHN커머스가 따로 집계하므로 같은 사이트라도 숫자가 조금 다릅니다. 실제 운영 데이터를 직접 대조·검증한 기준입니다.
         </p>
         <div className="tw why-tw">
           <table>
             <thead>
               <tr>
                 <th>항목</th>
-                <th className="n">GA4 ÷ 고도몰</th>
+                <th className="th-center">GA4 ÷ 고도몰</th>
                 <th>해석</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>방문 횟수(세션)</td>
-                <td className="n">0.99 ~ 1.07</td>
+                <td className="td-center">0.99 ~ 1.07</td>
                 <td>거의 같음</td>
               </tr>
               <tr>
                 <td>방문자 (일별 합)</td>
-                <td className="n">0.85 ~ 0.90</td>
+                <td className="td-center">0.85 ~ 0.90</td>
                 <td>GA4가 10~15% 적음</td>
               </tr>
               <tr>
                 <td>페이지뷰 (의심분 제외)</td>
-                <td className="n">약 0.97</td>
+                <td className="td-center">약 0.97</td>
                 <td>거의 같음 (9월 기준)</td>
               </tr>
               <tr>
                 <td>인기 상품·카테고리·게시판</td>
-                <td className="n">순위 거의 동일</td>
+                <td className="td-center">순위 거의 동일</td>
                 <td>조회수 ±5~20%</td>
               </tr>
             </tbody>

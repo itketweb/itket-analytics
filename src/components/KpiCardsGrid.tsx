@@ -9,21 +9,33 @@ export interface KpiItem {
 
 export interface KpiCardsGridProps {
   items: KpiItem[];
+  id?: string;
+  className?: string;
+  ariaLabel?: string;
 }
 
-export function KpiCardsGrid({ items }: KpiCardsGridProps) {
+export function KpiCardsGrid({
+  items,
+  id,
+  className = '',
+  ariaLabel = '주요 지표',
+}: KpiCardsGridProps) {
   return (
-    <div className="kpis">
+    <section
+      id={id}
+      className={`kpis ${className}`.trim()}
+      aria-label={ariaLabel}
+    >
       {items.map((item, idx) => (
-        <div key={idx} className="kpi">
-          <div className="l">{item.label}</div>
-          <div className="v">
+        <article key={item.label || idx} className="kpi">
+          <div className="l kpi-label">{item.label}</div>
+          <div className="v kpi-value">
             {typeof item.value === 'number' ? fmt(item.value) : item.value}
           </div>
           {item.badge}
           {item.sub}
-        </div>
+        </article>
       ))}
-    </div>
+    </section>
   );
 }

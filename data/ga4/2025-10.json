@@ -1,1 +1,158 @@
-{"v":3,"month":"2025-10","partial":false,"updated":"2026-10-15T01:39:15.734Z","total":{"activeUsers":0,"newUsers":0,"sessions":0,"screenPageViews":0,"userEngagementDuration":0,"engagedSessions":0},"daily":[],"pages":[],"sources":[],"channels":[],"campaigns":[],"devices":[],"signups":[],"signupSource":"join_ok","conv":{"defs":[{"id":"estimate","name":"견적 요청 완료","path":"/dbk/dbk_estimate_complete.php"},{"id":"signup","name":"회원가입 완료","path":"/member/join_ok.php"},{"id":"order","name":"주문 완료","path":"/order/order_end.php"}],"total":{"estimate":{"sessions":0,"users":0},"signup":{"sessions":0,"users":0},"order":{"sessions":0,"users":0}},"daily":{"estimate":[],"signup":[],"order":[]},"byMedium":{"estimate":[],"signup":[],"order":[]},"byChannel":{"estimate":[],"signup":[],"order":[]},"byCampaign":{"estimate":[],"signup":[],"order":[]},"byLanding":{"estimate":[],"signup":[],"order":[]},"byGoods":{"estimate":[],"signup":[],"order":[]}},"events":[],"keyBySource":[],"ecom":[],"goods":[],"categories":[],"boards":[],"shopUpdated":"2026-10-15T01:39:15.734Z"}
+{
+  "v": 3,
+  "month": "2025-10",
+  "partial": false,
+  "updated": "2026-10-15T01:39:15.734Z",
+  "total": {
+    "activeUsers": 0,
+    "newUsers": 0,
+    "sessions": 0,
+    "screenPageViews": 0,
+    "userEngagementDuration": 0,
+    "engagedSessions": 0
+  },
+  "daily": [],
+  "pages": [],
+  "sources": [],
+  "channels": [],
+  "campaigns": [],
+  "devices": [],
+  "signups": [
+    {
+      "date": "2025-10-31",
+      "count": 1
+    },
+    {
+      "date": "2025-10-26",
+      "count": 1
+    },
+    {
+      "date": "2025-10-23",
+      "count": 1
+    },
+    {
+      "date": "2025-10-21",
+      "count": 1
+    },
+    {
+      "date": "2025-10-16",
+      "count": 2
+    },
+    {
+      "date": "2025-10-14",
+      "count": 2
+    },
+    {
+      "date": "2025-10-09",
+      "count": 1
+    },
+    {
+      "date": "2025-10-02",
+      "count": 1
+    }
+  ],
+  "signupSource": "join_ok",
+  "conv": {
+    "defs": [
+      {
+        "id": "estimate",
+        "name": "견적 요청 완료",
+        "path": "/dbk/dbk_estimate_complete.php"
+      },
+      {
+        "id": "signup",
+        "name": "회원가입 완료",
+        "path": "/member/join_ok.php"
+      },
+      {
+        "id": "order",
+        "name": "주문 완료",
+        "path": "/order/order_end.php"
+      }
+    ],
+    "total": {
+      "estimate": {
+        "sessions": 0,
+        "users": 0
+      },
+      "signup": {
+        "sessions": 10,
+        "users": 10
+      },
+      "order": {
+        "sessions": 0,
+        "users": 0
+      }
+    },
+    "daily": {
+      "estimate": [],
+      "signup": [
+        {
+          "date": "2025-10-31",
+          "count": 1
+        },
+        {
+          "date": "2025-10-26",
+          "count": 1
+        },
+        {
+          "date": "2025-10-23",
+          "count": 1
+        },
+        {
+          "date": "2025-10-21",
+          "count": 1
+        },
+        {
+          "date": "2025-10-16",
+          "count": 2
+        },
+        {
+          "date": "2025-10-14",
+          "count": 2
+        },
+        {
+          "date": "2025-10-09",
+          "count": 1
+        },
+        {
+          "date": "2025-10-02",
+          "count": 1
+        }
+      ],
+      "order": []
+    },
+    "byMedium": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byChannel": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byCampaign": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byLanding": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byGoods": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    }
+  },
+  "events": [],
+  "keyBySource": [],
+  "ecom": [],
+  "goods": [],
+  "categories": [],
+  "boards": [],
+  "shopUpdated": "2026-10-15T01:39:15.734Z"
+}

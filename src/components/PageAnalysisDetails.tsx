@@ -23,8 +23,12 @@ export function PageAnalysisDetails({
   return (
     <>
       <div className="grid">
-        <div className="card">
-          <h2>월별 추이</h2>
+        <section
+          className="card card-page-monthly"
+          id="cardPageMonthly"
+          aria-labelledby="headingPageMonthly"
+        >
+          <h2 id="headingPageMonthly">월별 추이</h2>
           <div className="tw">
             {mrows.length > 0 ? (
               <table>
@@ -62,10 +66,14 @@ export function PageAnalysisDetails({
               <div className="empty">데이터 없음</div>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="card">
-          <h2>유입 매체</h2>
+        <section
+          className="card card-page-sources"
+          id="cardPageSources"
+          aria-labelledby="headingPageSources"
+        >
+          <h2 id="headingPageSources">유입 매체</h2>
           <div className="tw">
             {(r.sources || []).length > 0 ? (
               <table>
@@ -95,12 +103,16 @@ export function PageAnalysisDetails({
               <div className="empty">데이터 없음</div>
             )}
           </div>
-        </div>
+        </section>
       </div>
 
       <div className="grid">
-        <div className="card">
-          <h2>전환 (이 페이지로 시작한 방문)</h2>
+        <section
+          className="card card-page-conversions"
+          id="cardPageConversions"
+          aria-labelledby="headingPageConversions"
+        >
+          <h2 id="headingPageConversions">전환 (이 페이지로 시작한 방문)</h2>
           <div className="tw">
             {en.sessions > 0 ? (
               <>
@@ -131,9 +143,14 @@ export function PageAnalysisDetails({
                     })}
                   </tbody>
                 </table>
-                <p className="hint">
-                  이 페이지로 <b>처음 들어온 방문</b> {fmt(en.sessions)}회 중 전환 화면까지 간 세션입니다. 이 페이지를 거쳐 간 모든 전환이 아니라 “여기서 시작한” 전환입니다.
-                </p>
+                <div className="tbl-foot">
+                  <div className="foot-left">
+                    첫 랜딩 방문({fmt(en.sessions)}회) 기준 전환 도달 세션 및 전환율 (GA4)
+                  </div>
+                  <div className="foot-right">
+                    단위: 세션·%
+                  </div>
+                </div>
               </>
             ) : (
               <div className="empty">
@@ -141,10 +158,14 @@ export function PageAnalysisDetails({
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="card">
-          <h2>기기</h2>
+        <section
+          className="card card-page-devices"
+          id="cardPageDevices"
+          aria-labelledby="headingPageDevices"
+        >
+          <h2 id="headingPageDevices">기기</h2>
           <div className="tw">
             {(r.devices || []).length > 0 ? (
               <table>
@@ -169,12 +190,16 @@ export function PageAnalysisDetails({
               <div className="empty">데이터 없음</div>
             )}
           </div>
-        </div>
+        </section>
       </div>
 
       <div className="grid">
-        <div className="card">
-          <h2>합쳐진 주소 (상위 15)</h2>
+        <section
+          className="card card-page-urls"
+          id="cardPageUrls"
+          aria-labelledby="headingPageUrls"
+        >
+          <h2 id="headingPageUrls">합쳐진 주소 (상위 15)</h2>
           <div className="tw">
             {(r.urls || []).length > 0 ? (
               <table>
@@ -206,10 +231,14 @@ export function PageAnalysisDetails({
               <div className="empty">데이터 없음</div>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="card">
-          <h2>이 페이지에서 발생한 이벤트</h2>
+        <section
+          className="card card-page-events"
+          id="cardPageEvents"
+          aria-labelledby="headingPageEvents"
+        >
+          <h2 id="headingPageEvents">이 페이지에서 발생한 이벤트</h2>
           <div className="tw">
             {(r.events || []).length > 0 ? (
               <table>
@@ -232,7 +261,7 @@ export function PageAnalysisDetails({
               <div className="empty">데이터 없음</div>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </>
   );

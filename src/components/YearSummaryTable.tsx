@@ -33,26 +33,28 @@ export function YearSummaryTable({
   const sum = (key: MetricKey) => ks.reduce((a, k) => a + val(k, key), 0);
 
   return (
-    <div className="card">
-      <h2>
-        <span>
-          월별 요약{' '}
-          <span className="sub-title">
-            행을 누르면 해당 월로 이동 · 방문자는 일별 방문자의 합(고도몰 통계와 같은 방식) · * 는 방문 측정이 빠진 달에 고도몰 통계에서 직접 확인한 회원가입 수(참고용)
-          </span>
-        </span>
-      </h2>
+    <section
+      className="card card-year-summary"
+      id="sectionYearSummary"
+      aria-labelledby="headingYearSummary"
+    >
+      <div className="card-head-bar">
+        <h2 id="headingYearSummary">
+          <span>월별 요약</span>
+          <span className="sub-title">행을 누르면 해당 월 상세 분석으로 이동</span>
+        </h2>
+      </div>
 
       <div className="tw">
         <table className="stk">
           <thead>
             <tr>
-              <th>월</th>
-              <th className="n">방문자(일 합)</th>
-              <th className="n">세션</th>
-              <th className="n">페이지뷰</th>
-              <th className="n">신규 방문자</th>
-              <th className="n">회원가입</th>
+              <th className="th-month">월</th>
+              <th className="n th-stat">방문자(일 합)</th>
+              <th className="n th-stat">세션</th>
+              <th className="n th-stat">페이지뷰</th>
+              <th className="n th-stat">신규 방문자</th>
+              <th className="n th-stat">회원가입</th>
             </tr>
           </thead>
           <tbody>
@@ -66,7 +68,7 @@ export function YearSummaryTable({
               return (
                 <tr
                   key={k}
-                  className={m ? 'link' : ''}
+                  className={m ? 'link' : 'na'}
                   onClick={m ? () => onSelectMonth(k) : undefined}
                 >
                   <td>
@@ -75,8 +77,12 @@ export function YearSummaryTable({
                   </td>
                   {gap ? (
                     <>
-                      <td className="n warn-text" colSpan={4}>
-                        집계 없음 — 방문 측정이 빠진 구간(측정 누락 추정)
+                      <td
+                        className="td-notice muted"
+                        colSpan={4}
+                        title="해당 기간은 방문 데이터가 집계되지 않은 기간입니다 (회원가입 실적은 정상 집계)"
+                      >
+                        방문 데이터 미집계 기간
                       </td>
                       <td
                         className="n"
@@ -92,7 +98,7 @@ export function YearSummaryTable({
                       </td>
                     ))
                   ) : (
-                    <td className="n muted" colSpan={5}>
+                    <td className="td-notice muted" colSpan={5}>
                       ―
                     </td>
                   )}
@@ -101,16 +107,16 @@ export function YearSummaryTable({
             })}
           </tbody>
           <tfoot>
-            <tr>
-              <td>
-                <b>합계</b>
+            <tr className="tr-total">
+              <td className="td-month td-total-label">
+                <span className="total-label">합계</span>
               </td>
-              <td className="n">
+              <td className="n td-stat td-total-val">
                 <b>{fmt(sum('activeUsers'))}</b>
               </td>
               {(['sessions', 'screenPageViews', 'newUsers', 'signups'] as MetricKey[]).map(
                 (key) => (
-                  <td key={key} className="n">
+                  <td key={key} className="n td-stat td-total-val">
                     <b>{fmt(sum(key))}</b>
                   </td>
                 ),
@@ -119,6 +125,14 @@ export function YearSummaryTable({
           </tfoot>
         </table>
       </div>
-    </div>
+      <div className="tbl-foot">
+        <div className="foot-left">
+          <b>방문자</b> 일별 합산 · <b>세션·PV·신규</b> GA4 기준 · <b>회원가입</b> 가입완료 기준 (*고도몰 DB 실가입)
+        </div>
+        <div className="foot-right">
+          단위: 명·회·건
+        </div>
+      </div>
+    </section>
   );
 }

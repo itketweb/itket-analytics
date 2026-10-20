@@ -1,3 +1,5 @@
+import { FileSpreadsheet, Menu, Moon, Sun } from 'lucide-react';
+
 interface HeaderProps {
   isPage: boolean;
   sel: string;
@@ -6,6 +8,7 @@ interface HeaderProps {
   isDark: boolean;
   onOpenDrawer: () => void;
   onToggleTheme: () => void;
+  onExportExcel?: () => void;
 }
 
 export function Header({
@@ -16,6 +19,7 @@ export function Header({
   isDark,
   onOpenDrawer,
   onToggleTheme,
+  onExportExcel,
 }: HeaderProps) {
   const crumb = isPage
     ? '페이지 분석'
@@ -55,16 +59,7 @@ export function Header({
         aria-controls="side"
         onClick={onOpenDrawer}
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+        <Menu size={18} aria-hidden="true" />
       </button>
 
       <h1>
@@ -85,34 +80,30 @@ export function Header({
           id="theme"
           role="switch"
           aria-checked={isDark}
-          aria-label="다크 모드"
-          title="테마 전환"
+          aria-label={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
+          title={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
           onClick={onToggleTheme}
         >
-          <span className="k">☀</span>
-          <span className="k">☾</span>
-          <i />
+          <span className="tgl-icon tgl-sun" aria-hidden="true">
+            <Sun size={12} strokeWidth={2.4} />
+          </span>
+          <span className="tgl-icon tgl-moon" aria-hidden="true">
+            <Moon size={12} strokeWidth={2.4} />
+          </span>
+          <i className="tgl-thumb" aria-hidden="true" />
         </button>
-        <button
-          type="button"
-          className="btn ic pr"
-          title="인쇄 / PDF 저장"
-          onClick={() => window.print()}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {onExportExcel && (
+          <button
+            type="button"
+            className="btn btn-excel"
+            id="btnExportExcel"
+            title="현재 화면의 실적 데이터를 엑셀(.xlsx)로 다운로드합니다"
+            onClick={onExportExcel}
           >
-            <path d="M6 9V3h12v6" />
-            <rect x="6" y="14" width="12" height="7" />
-            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-          </svg>
-          <span>인쇄/PDF</span>
-        </button>
+            <FileSpreadsheet size={15} aria-hidden="true" />
+            <span>엑셀 다운로드</span>
+          </button>
+        )}
       </div>
     </header>
   );
