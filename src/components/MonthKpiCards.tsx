@@ -1,6 +1,6 @@
 import type { MetricKey, MonthData } from '../types/analytics';
 import { dur, fmt } from '../utils/format';
-import { metricOf, sumDays, SUSP_RATIO } from '../utils/metrics';
+import { metricOf, sumDays } from '../utils/metrics';
 import { DeltaBadge } from './DeltaBadge';
 import { KpiCardsGrid, type KpiItem } from './KpiCardsGrid';
 
@@ -12,7 +12,7 @@ interface MonthKpiCardsProps {
 }
 
 const KPI_DEFS: Array<[string, MetricKey]> = [
-  ['방문자 (일별 합)', 'activeUsers'],
+  ['방문자', 'activeUsers'],
   ['신규 방문자', 'newUsers'],
   ['세션', 'sessions'],
   ['페이지뷰', 'screenPageViews'],
@@ -26,22 +26,44 @@ export function MonthKpiCards({
   suspExcess,
 }: MonthKpiCardsProps) {
   const partialDays = m.partial ? m.daily.length : null;
+  const prevLabel = partialDays ? '전월 동기간' : '전월';
 
-  const avgDur = m.total.activeUsers
-    ? m.total.userEngagementDuration / m.total.activeUsers
-    : 0;
-  const prevAvgDur =
-    prev && prev.total.activeUsers
-      ? prev.total.userEngagementDuration / prev.total.activeUsers
-      : null;
+  // 체류시간 계산
+  let curDur = 0;
+  let prevAvgDur: number | null = null;
+
+  if (partialDays) {
+    const curDurSum = m.daily.reduce((a, r) => a + (r.userEngagementDuration || 0), 0);
+    const curUsersSum = m.daily.reduce((a, r) => a + (r.activeUsers || 0), 0);
+    curDur = curUsersSum ? curDurSum / curUsersSum : 0;
+
+    if (prev) {
+      const prevPart = prev.daily.filter((r) => +r.date.slice(8) <= partialDays);
+      const prevDurSum = prevPart.reduce((a, r) => a + (r.userEngagementDuration || 0), 0);
+      const prevUsersSum = prevPart.reduce((a, r) => a + (r.activeUsers || 0), 0);
+      prevAvgDur = prevUsersSum ? prevDurSum / prevUsersSum : 0;
+    }
+  } else {
+    curDur = m.total.activeUsers
+      ? m.total.userEngagementDuration / m.total.activeUsers
+      : 0;
+    prevAvgDur =
+      prev && prev.total.activeUsers
+        ? prev.total.userEngagementDuration / prev.total.activeUsers
+        : null;
+  }
 
   const items: KpiItem[] = KPI_DEFS.map(([label, key]) => {
     const cur = metricOf(m, key);
+    const prevVal = partialDays
+      ? (prev ? sumDays(prev, key, partialDays) : null)
+      : (prev ? metricOf(prev, key) : null);
+
     const badge = partialDays ? (
-      prev ? (
+      prevVal != null ? (
         <DeltaBadge
           cur={cur}
-          prev={sumDays(prev, key, partialDays)}
+          prev={prevVal}
           label="전월 동기간"
         />
       ) : null
@@ -49,7 +71,7 @@ export function MonthKpiCards({
       <>
         <DeltaBadge
           cur={cur}
-          prev={prev ? metricOf(prev, key) : null}
+          prev={prevVal}
           label="전월"
         />
         <DeltaBadge
@@ -60,35 +82,20 @@ export function MonthKpiCards({
       </>
     );
 
-    let sub: React.ReactNode = null;
+    let tooltip: string | undefined = undefined;
     if (key === 'activeUsers') {
-      sub = (
-        <div
-          className="l sub1 sub-top"
-          title="한 달 동안 같은 사람을 한 번만 센 값(GA4 기본 방식)입니다. 위 값은 고도몰 통계와 같이 '날마다 온 사람'을 더한 값입니다."
-        >
-          순 방문자 {fmt(m.total.activeUsers)}
-        </div>
-      );
+      tooltip = `순 방문자(월 중복 제거): ${fmt(m.total.activeUsers)}명\n(표시된 값은 고도몰 통계와 동일한 일별 방문자 합산입니다)`;
     } else if (key === 'screenPageViews' && suspExcess > 0) {
-      sub = (
-        <div
-          className="l sub1 sub-warn"
-          title={`방문자 1명당 조회수가 ${SUSP_RATIO}배를 넘는 페이지의 초과분(내부 새로고침 의심)을 뺀 추정값입니다. 고도몰 통계와 비교할 때 참고하세요.`}
-        >
-          ⚠ 의심분 제외 ≈ {fmt(cur - suspExcess)}
-        </div>
-      );
+      tooltip = `의심분(새로고침 추정) 약 ${fmt(suspExcess)}뷰 제외 시 ≈ ${fmt(cur - suspExcess)}뷰`;
     } else if (key === 'signups' && m.signupSource === 'join_ok') {
-      sub = (
-        <div
-          className="l sub-tight"
-          title="이 사이트는 가입 완료 시 GA4 sign_up 이벤트를 보내지 않아, 가입 완료 화면(/member/join_ok.php)을 본 사용자 수를 세었습니다. 고도몰 통계와 비교해 보세요."
-        >
-          가입 완료 화면 기준
-        </div>
-      );
+      tooltip = '가입 완료 화면(/member/join_ok.php)을 본 사용자 수 기준';
     }
+
+    const sub = (
+      <div className="l sub1 sub-top" title={tooltip}>
+        {prevVal != null ? `${prevLabel} ${fmt(prevVal)}` : `${prevLabel} ―`}
+      </div>
+    );
 
     return {
       label,
@@ -100,12 +107,26 @@ export function MonthKpiCards({
 
   items.push({
     label: '방문자당 체류시간',
-    value: dur(avgDur),
-    badge: !partialDays ? (
-      <DeltaBadge cur={avgDur} prev={prevAvgDur} label="전월" />
+    value: dur(curDur),
+    badge: prevAvgDur != null ? (
+      <DeltaBadge
+        cur={curDur}
+        prev={prevAvgDur}
+        label={prevLabel}
+      />
     ) : null,
-    sub: null,
+    sub: (
+      <div className="l sub1 sub-top">
+        {prevAvgDur != null ? `${prevLabel} ${dur(prevAvgDur)}` : `${prevLabel} ―`}
+      </div>
+    ),
   });
 
-  return <KpiCardsGrid items={items} />;
+  return (
+    <KpiCardsGrid
+      items={items}
+      id="kpisMonth"
+      ariaLabel="월간 핵심 성과 지표"
+    />
+  );
 }

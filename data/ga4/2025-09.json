@@ -1,1 +1,349 @@
-{"v":3,"month":"2025-09","partial":false,"updated":"2026-10-15T01:39:07.857Z","total":{"activeUsers":2,"newUsers":1,"sessions":4,"screenPageViews":30,"userEngagementDuration":137,"engagedSessions":4},"daily":[{"date":"2025-09-02","activeUsers":1,"newUsers":1,"sessions":1,"screenPageViews":7,"userEngagementDuration":34,"engagedSessions":1},{"date":"2025-09-03","activeUsers":1,"newUsers":0,"sessions":2,"screenPageViews":5,"userEngagementDuration":21,"engagedSessions":2},{"date":"2025-09-08","activeUsers":1,"newUsers":0,"sessions":1,"screenPageViews":18,"userEngagementDuration":82,"engagedSessions":1}],"pages":[{"pagePath":"/goods/goods_list.php","screenPageViews":13,"activeUsers":2,"userEngagementDuration":57},{"pagePath":"/","screenPageViews":9,"activeUsers":2,"userEngagementDuration":39},{"pagePath":"/board/list.php","screenPageViews":2,"activeUsers":2,"userEngagementDuration":5},{"pagePath":"/goods/goods_view.php","screenPageViews":2,"activeUsers":1,"userEngagementDuration":20},{"pagePath":"/main/index.php","screenPageViews":2,"activeUsers":2,"userEngagementDuration":4},{"pagePath":"/board/view.php","screenPageViews":1,"activeUsers":1,"userEngagementDuration":4},{"pagePath":"/its/its_recruit.php","screenPageViews":1,"activeUsers":1,"userEngagementDuration":8}],"sources":[{"sessionSourceMedium":"gdadmin.itketwtr0939.godomall.com / referral","sessions":4,"activeUsers":2,"newUsers":1,"engagedSessions":4}],"channels":[{"sessionDefaultChannelGroup":"Referral","sessions":4,"activeUsers":2}],"campaigns":[{"sessionCampaignName":"(referral)","sessionSourceMedium":"gdadmin.itketwtr0939.godomall.com / referral","sessions":4,"activeUsers":2}],"devices":[{"deviceCategory":"desktop","activeUsers":2,"sessions":4}],"signups":[],"signupSource":"join_ok","conv":{"defs":[{"id":"estimate","name":"견적 요청 완료","path":"/dbk/dbk_estimate_complete.php"},{"id":"signup","name":"회원가입 완료","path":"/member/join_ok.php"},{"id":"order","name":"주문 완료","path":"/order/order_end.php"}],"total":{"estimate":{"sessions":0,"users":0},"signup":{"sessions":0,"users":0},"order":{"sessions":0,"users":0}},"daily":{"estimate":[],"signup":[],"order":[]},"byMedium":{"estimate":[],"signup":[],"order":[]},"byChannel":{"estimate":[],"signup":[],"order":[]},"byCampaign":{"estimate":[],"signup":[],"order":[]},"byLanding":{"estimate":[],"signup":[],"order":[]},"byGoods":{"estimate":[],"signup":[],"order":[]}},"events":[{"eventName":"page_view","eventCount":30,"totalUsers":2,"keyEvents":30},{"eventName":"user_engagement","eventCount":28,"totalUsers":2,"keyEvents":0},{"eventName":"scroll","eventCount":12,"totalUsers":1,"keyEvents":12},{"eventName":"session_start","eventCount":4,"totalUsers":2,"keyEvents":4},{"eventName":"first_visit","eventCount":1,"totalUsers":1,"keyEvents":1}],"keyBySource":[{"sessionSourceMedium":"gdadmin.itketwtr0939.godomall.com / referral","sessions":4,"keyEvents":47}],"ecom":[],"goods":[],"categories":[],"boards":[],"shopUpdated":"2026-10-15T01:39:07.857Z"}
+{
+  "v": 3,
+  "month": "2025-09",
+  "partial": false,
+  "updated": "2026-10-15T01:39:07.857Z",
+  "total": {
+    "activeUsers": 2,
+    "newUsers": 1,
+    "sessions": 4,
+    "screenPageViews": 30,
+    "userEngagementDuration": 137,
+    "engagedSessions": 4
+  },
+  "daily": [
+    {
+      "date": "2025-09-02",
+      "activeUsers": 1,
+      "newUsers": 1,
+      "sessions": 1,
+      "screenPageViews": 7,
+      "userEngagementDuration": 34,
+      "engagedSessions": 1
+    },
+    {
+      "date": "2025-09-03",
+      "activeUsers": 1,
+      "newUsers": 0,
+      "sessions": 2,
+      "screenPageViews": 5,
+      "userEngagementDuration": 21,
+      "engagedSessions": 2
+    },
+    {
+      "date": "2025-09-08",
+      "activeUsers": 1,
+      "newUsers": 0,
+      "sessions": 1,
+      "screenPageViews": 18,
+      "userEngagementDuration": 82,
+      "engagedSessions": 1
+    }
+  ],
+  "pages": [
+    {
+      "pagePath": "/goods/goods_list.php",
+      "screenPageViews": 13,
+      "activeUsers": 2,
+      "userEngagementDuration": 57
+    },
+    {
+      "pagePath": "/",
+      "screenPageViews": 9,
+      "activeUsers": 2,
+      "userEngagementDuration": 39
+    },
+    {
+      "pagePath": "/board/list.php",
+      "screenPageViews": 2,
+      "activeUsers": 2,
+      "userEngagementDuration": 5
+    },
+    {
+      "pagePath": "/goods/goods_view.php",
+      "screenPageViews": 2,
+      "activeUsers": 1,
+      "userEngagementDuration": 20
+    },
+    {
+      "pagePath": "/main/index.php",
+      "screenPageViews": 2,
+      "activeUsers": 2,
+      "userEngagementDuration": 4
+    },
+    {
+      "pagePath": "/board/view.php",
+      "screenPageViews": 1,
+      "activeUsers": 1,
+      "userEngagementDuration": 4
+    },
+    {
+      "pagePath": "/its/its_recruit.php",
+      "screenPageViews": 1,
+      "activeUsers": 1,
+      "userEngagementDuration": 8
+    }
+  ],
+  "sources": [
+    {
+      "sessionSourceMedium": "gdadmin.itketwtr0939.godomall.com / referral",
+      "sessions": 4,
+      "activeUsers": 2,
+      "newUsers": 1,
+      "engagedSessions": 4
+    }
+  ],
+  "channels": [
+    {
+      "sessionDefaultChannelGroup": "Referral",
+      "sessions": 4,
+      "activeUsers": 2
+    }
+  ],
+  "campaigns": [
+    {
+      "sessionCampaignName": "(referral)",
+      "sessionSourceMedium": "gdadmin.itketwtr0939.godomall.com / referral",
+      "sessions": 4,
+      "activeUsers": 2
+    }
+  ],
+  "devices": [
+    {
+      "deviceCategory": "desktop",
+      "activeUsers": 2,
+      "sessions": 4
+    }
+  ],
+  "signups": [
+    {
+      "date": "2025-09-30",
+      "count": 2
+    },
+    {
+      "date": "2025-09-28",
+      "count": 1
+    },
+    {
+      "date": "2025-09-26",
+      "count": 1
+    },
+    {
+      "date": "2025-09-24",
+      "count": 1
+    },
+    {
+      "date": "2025-09-23",
+      "count": 2
+    },
+    {
+      "date": "2025-09-22",
+      "count": 1
+    },
+    {
+      "date": "2025-09-18",
+      "count": 2
+    },
+    {
+      "date": "2025-09-16",
+      "count": 1
+    },
+    {
+      "date": "2025-09-15",
+      "count": 1
+    },
+    {
+      "date": "2025-09-12",
+      "count": 1
+    },
+    {
+      "date": "2025-09-10",
+      "count": 1
+    },
+    {
+      "date": "2025-09-08",
+      "count": 1
+    },
+    {
+      "date": "2025-09-07",
+      "count": 1
+    },
+    {
+      "date": "2025-09-04",
+      "count": 1
+    },
+    {
+      "date": "2025-09-01",
+      "count": 2
+    }
+  ],
+  "signupSource": "join_ok",
+  "conv": {
+    "defs": [
+      {
+        "id": "estimate",
+        "name": "견적 요청 완료",
+        "path": "/dbk/dbk_estimate_complete.php"
+      },
+      {
+        "id": "signup",
+        "name": "회원가입 완료",
+        "path": "/member/join_ok.php"
+      },
+      {
+        "id": "order",
+        "name": "주문 완료",
+        "path": "/order/order_end.php"
+      }
+    ],
+    "total": {
+      "estimate": {
+        "sessions": 0,
+        "users": 0
+      },
+      "signup": {
+        "sessions": 19,
+        "users": 19
+      },
+      "order": {
+        "sessions": 0,
+        "users": 0
+      }
+    },
+    "daily": {
+      "estimate": [],
+      "signup": [
+        {
+          "date": "2025-09-30",
+          "count": 2
+        },
+        {
+          "date": "2025-09-28",
+          "count": 1
+        },
+        {
+          "date": "2025-09-26",
+          "count": 1
+        },
+        {
+          "date": "2025-09-24",
+          "count": 1
+        },
+        {
+          "date": "2025-09-23",
+          "count": 2
+        },
+        {
+          "date": "2025-09-22",
+          "count": 1
+        },
+        {
+          "date": "2025-09-18",
+          "count": 2
+        },
+        {
+          "date": "2025-09-16",
+          "count": 1
+        },
+        {
+          "date": "2025-09-15",
+          "count": 1
+        },
+        {
+          "date": "2025-09-12",
+          "count": 1
+        },
+        {
+          "date": "2025-09-10",
+          "count": 1
+        },
+        {
+          "date": "2025-09-08",
+          "count": 1
+        },
+        {
+          "date": "2025-09-07",
+          "count": 1
+        },
+        {
+          "date": "2025-09-04",
+          "count": 1
+        },
+        {
+          "date": "2025-09-01",
+          "count": 2
+        }
+      ],
+      "order": []
+    },
+    "byMedium": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byChannel": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byCampaign": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byLanding": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    },
+    "byGoods": {
+      "estimate": [],
+      "signup": [],
+      "order": []
+    }
+  },
+  "events": [
+    {
+      "eventName": "page_view",
+      "eventCount": 30,
+      "totalUsers": 2,
+      "keyEvents": 30
+    },
+    {
+      "eventName": "user_engagement",
+      "eventCount": 28,
+      "totalUsers": 2,
+      "keyEvents": 0
+    },
+    {
+      "eventName": "scroll",
+      "eventCount": 12,
+      "totalUsers": 1,
+      "keyEvents": 12
+    },
+    {
+      "eventName": "session_start",
+      "eventCount": 4,
+      "totalUsers": 2,
+      "keyEvents": 4
+    },
+    {
+      "eventName": "first_visit",
+      "eventCount": 1,
+      "totalUsers": 1,
+      "keyEvents": 1
+    }
+  ],
+  "keyBySource": [
+    {
+      "sessionSourceMedium": "gdadmin.itketwtr0939.godomall.com / referral",
+      "sessions": 4,
+      "keyEvents": 47
+    }
+  ],
+  "ecom": [],
+  "goods": [],
+  "categories": [],
+  "boards": [],
+  "shopUpdated": "2026-10-15T01:39:07.857Z"
+}

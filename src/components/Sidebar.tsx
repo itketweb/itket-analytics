@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { BarChart3, FileSearch, LayoutDashboard, X } from 'lucide-react';
 import type { MonthData } from '../types/analytics';
-import { isGap } from '../utils/metrics';
+import { MonthNav } from './MonthNav';
+import { YearSelector } from './YearSelector';
 
 interface SidebarProps {
   title: string;
@@ -29,17 +30,7 @@ export function Sidebar({
   onGoPageAnalysis,
   onSelectPeriod,
 }: SidebarProps) {
-  const monsRef = useRef<HTMLElement>(null);
   const currentYear = sel.slice(0, 4);
-
-  useEffect(() => {
-    const mo = monsRef.current;
-    if (!mo) return;
-    const on = mo.querySelector<HTMLElement>('.m.on');
-    if (on && mo.scrollWidth > mo.clientWidth) {
-      mo.scrollLeft = on.offsetLeft - (mo.clientWidth - on.offsetWidth) / 2;
-    }
-  }, [sel, isPage]);
 
   return (
     <>
@@ -56,16 +47,7 @@ export function Sidebar({
           aria-label="메뉴 닫기"
           onClick={onCloseDrawer}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6 6 18M6 6l12 12" />
-          </svg>
+          <X size={18} aria-hidden="true" />
         </button>
 
         <a
@@ -80,28 +62,20 @@ export function Sidebar({
           }}
         >
           <i>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-            </svg>
+            <BarChart3 size={15} aria-hidden="true" />
           </i>
           <span>{title}</span>
         </a>
 
-        <div className="sn">
+        <nav className="sn" id="sideNav" aria-label="사이드바 메뉴">
           <button
             type="button"
             className={`m ${!isPage ? 'on' : ''}`}
             id="navDash"
             onClick={onGoDashboard}
           >
-            대시보드
+            <LayoutDashboard size={15} aria-hidden="true" />
+            <span>대시보드</span>
           </button>
           <button
             type="button"
@@ -109,70 +83,47 @@ export function Sidebar({
             id="navPage"
             onClick={onGoPageAnalysis}
           >
-            페이지 분석
+            <FileSearch size={15} aria-hidden="true" />
+            <span>페이지 분석</span>
           </button>
-        </div>
+        </nav>
 
-        <div className="sy">
+        <section className="sy" id="sideYearSection" aria-label="연도 선택">
           <div className="lbl">연도</div>
-          <div className="years" id="years">
-            {years.map((y) => (
-              <button
-                key={y}
-                type="button"
-                className={`y ${!isPage && sel.startsWith(y) ? 'on' : ''}`}
-                onClick={() => onSelectPeriod(y, true)}
-              >
-                {y}년
-              </button>
-            ))}
-          </div>
-        </div>
+          <YearSelector
+            years={years}
+            selectedYear={sel}
+            isPage={isPage}
+            onSelectYear={(y) => onSelectPeriod(y, true)}
+          />
+        </section>
 
-        <div className="sm">
+        <section className="sm" id="sideMonthSection" aria-label="기간 선택">
           <div className="lbl">기간</div>
-          <nav className="mons" id="mons" ref={monsRef}>
-            {currentYear && (
-              <button
-                type="button"
-                className={`m all ${!isPage && sel === currentYear ? 'on' : ''}`}
-                onClick={() => onSelectPeriod(currentYear, false)}
-              >
-                연간
-              </button>
-            )}
-            {currentYear &&
-              Array.from({ length: 12 }, (_, i) => {
-                const k = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
-                const mData = months[k];
-                const gap = isGap(mData);
-                const enabled = Boolean(mData && !gap);
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    className={`m ${!isPage && sel === k ? 'on' : ''}`}
-                    disabled={!enabled}
-                    title={
-                      gap
-                        ? '방문 측정이 빠진 달입니다 (고도몰 방문 통계도 0이지만 같은 기간 회원가입은 기록됨 — 측정 누락으로 추정)'
-                        : undefined
-                    }
-                    onClick={() => onSelectPeriod(k, false)}
-                  >
-                    {i + 1}월
-                  </button>
-                );
-              })}
-          </nav>
-        </div>
+          <MonthNav
+            currentYear={currentYear}
+            selectedPeriod={sel}
+            isPage={isPage}
+            months={months}
+            onSelectPeriod={onSelectPeriod}
+          />
+        </section>
 
-        <div className="sfoot">
-          출처: Google Analytics 4
-          <br />
-          수집 15분 · 화면 5분
-          <br />
-          접속자 30초 간격 갱신
+        {/* 마케팅팀 · 배포 날짜 기준 릴리즈 표기 */}
+        <div className="side-foot" id="sideReleaseFoot">
+          <span className="team">마케팅팀</span> ·{' '}
+          <span
+            className="rel"
+            title={
+              typeof __APP_COMMIT__ !== 'undefined' && __APP_COMMIT__
+                ? `커밋 ${__APP_COMMIT__}`
+                : undefined
+            }
+          >
+            {typeof __APP_RELEASE__ !== 'undefined'
+              ? __APP_RELEASE__
+              : 'v26.10.20'}
+          </span>
         </div>
       </aside>
     </>

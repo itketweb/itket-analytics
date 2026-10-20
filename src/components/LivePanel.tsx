@@ -1,5 +1,8 @@
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useLivePolling } from '../hooks/useLivePolling';
 import { agoText, computeOdometer, fmt } from '../utils/format';
+import { LivePanelSkeleton } from './LivePanelSkeleton';
 
 interface LivePanelProps {
   liveUrl: string;
@@ -14,6 +17,26 @@ const DEVICE_LABELS: Record<string, string> = {
 export function LivePanel({ liveUrl }: LivePanelProps) {
   const { live, err, paused, rollFrom, deltaInfo, nowMs } =
     useLivePolling(liveUrl);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem('itket_live_collapsed');
+      return saved !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('itket_live_collapsed', String(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
 
   if (!liveUrl) {
     return <div id="liveBox" />;
@@ -37,27 +60,23 @@ export function LivePanel({ liveUrl }: LivePanelProps) {
   }
 
   if (!live) {
-    return (
-      <div id="liveBox">
-        <div className="live">
-          <div>
-            <div className="l lh">
-              <span className="dot off" />
-              실시간
+    if (err) {
+      return (
+        <div id="liveBox">
+          <div className="live">
+            <div>
+              <div className="l lh">
+                <span className="dot off" />
+                실시간
+              </div>
+              <div className="n msg">연결 대기 중…</div>
             </div>
-            <div className="n msg">{err ? '연결 대기 중…' : '불러오는 중…'}</div>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
+    return <LivePanelSkeleton />;
   }
-
-  const mins = Array<number>(30).fill(0);
-  (live.minutes || []).forEach((r) => {
-    const i = +r.minutesAgo;
-    if (i >= 0 && i < 30) mins[29 - i] = r.activeUsers;
-  });
-  const mx = Math.max(1, ...mins);
 
   const dev = (live.devices || [])
     .map(
@@ -74,10 +93,53 @@ export function LivePanel({ liveUrl }: LivePanelProps) {
   const odoDigits =
     rollFrom != null ? computeOdometer(rollFrom, live.activeUsers) : null;
 
+  if (collapsed) {
+    return (
+      <div id="liveBox">
+        <div className="live live-collapsed" id="livePanel">
+          <div className="live-collapsed-content">
+            <span className={`dot${live.stale ? ' off' : ''}`} />
+            <span className="live-collapsed-label">실시간 접속</span>
+            <b className="live-collapsed-val">{fmt(live.activeUsers)}명</b>
+            {showDelta && (
+              <span className={`chip ${deltaInfo.d > 0 ? 'up' : 'down'}`}>
+                {deltaInfo.d > 0 ? '▲ +' : '▼ '}
+                {deltaInfo.d}
+              </span>
+            )}
+            <span className="live-collapsed-sub">
+              ({dev || '집계 중'} · {agoText(ago)})
+            </span>
+          </div>
+          <button
+            type="button"
+            className="btn-live-toggle"
+            onClick={toggleCollapsed}
+            aria-label="실시간 접속 현황 자세히 보기"
+            title="실시간 접속 현황 자세히 보기"
+          >
+            <span>자세히 보기</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div id="liveBox">
-      <div className="live">
-        <div>
+      <section className="live" id="livePanel" aria-label="실시간 접속 현황">
+        <button
+          type="button"
+          className="btn-live-toggle live-toggle-abs"
+          onClick={toggleCollapsed}
+          aria-label="실시간 패널 접기"
+          title="실시간 패널 접기"
+        >
+          <span>접기</span>
+          <ChevronUp size={14} aria-hidden="true" />
+        </button>
+        <div className="live-stat" id="liveStatBox">
           <div className="l lh">
             <span className={`dot${live.stale ? ' off' : ''}`} />
             지금 접속 중 (최근 30분)
@@ -108,38 +170,14 @@ export function LivePanel({ liveUrl }: LivePanelProps) {
           </div>
           <div className="l">
             {dev || '\u00a0'} ·{' '}
-            <span id="liveAgo" data-at={live.at}>
+            <time id="liveAgo" data-at={live.at} dateTime={live.at}>
               {agoText(ago)}
-            </span>{' '}
+            </time>{' '}
             갱신{live.stale ? ' · 조회 한도로 지연(최근 성공값)' : ''}
           </div>
         </div>
 
-        <div>
-          <div className="l lh">분당 접속자 (30분)</div>
-          <svg viewBox="0 0 300 44" preserveAspectRatio="none" role="img">
-            {mins.map((v, i) => {
-              const barH = Math.max(1.5, (v / mx) * 42);
-              return (
-                <rect
-                  key={i}
-                  className="b"
-                  x={i * 10 + 1}
-                  y={44 - barH}
-                  width={8}
-                  height={barH}
-                  rx={1.5}
-                >
-                  <title>
-                    {30 - i}분 전: {v}명
-                  </title>
-                </rect>
-              );
-            })}
-          </svg>
-        </div>
-
-        <div>
+        <div className="live-pages" id="livePagesBox">
           <div className="l lh">지금 보는 페이지</div>
           <ul>
             {(live.pages || []).length > 0 ? (
@@ -158,7 +196,7 @@ export function LivePanel({ liveUrl }: LivePanelProps) {
             )}
           </ul>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

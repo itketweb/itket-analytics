@@ -26,6 +26,8 @@ $bp-sm: 480px;
   --warnbg: #2b2210;
   --bar: #6c78e6;
   --bar2: #2c3170;
+  --skeleton-base: #1c1e22;
+  --skeleton-shimmer: #282a30;
   --sh: none;
 }
 
@@ -51,6 +53,8 @@ $bp-sm: 480px;
   --warnbg: #fff4e0;
   --bar: #5e6ad2;
   --bar2: #c9cef3;
+  --skeleton-base: #e6e7ea;
+  --skeleton-shimmer: #f3f4f6;
   --sh: 0 1px 2px rgba(15, 16, 17, 0.04);
   --th: 4rem;
   color-scheme: light;

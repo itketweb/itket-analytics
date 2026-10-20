@@ -24,7 +24,6 @@ export const CONV_BY: Array<[ConvByKey, string]> = [
   ['byCampaign', '캠페인'],
   ['byLanding', '랜딩 페이지'],
   ['byGoods', '상품'],
-  ['byDevice', '기기'],
 ];
 
 export const SUSP_MIN_PV = 500;

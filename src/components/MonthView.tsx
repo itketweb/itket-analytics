@@ -9,12 +9,21 @@ import type {
 import { k2v, METRICS, okM, prevKey, suspOf, yoyKey } from '../utils/metrics';
 import { DailyChart } from './BarChart';
 import { ConversionSection } from './ConversionSection';
+import { MonthViewSkeleton } from './DashboardSkeleton';
 import { InternalFilterNote } from './InternalFilterNote';
 import { MonthKpiCards } from './MonthKpiCards';
+import { PageHeader } from './PageHeader';
 import { PopularPagesCard } from './PopularPagesCard';
 import { SegmentedControl } from './SegmentedControl';
 import { ShopCard } from './ShopCard';
 import { WhyCard } from './WhyCard';
+import { SecSrc, type SourceLinkItem } from './SecSrc';
+
+const MONTH_SOURCES: SourceLinkItem[] = [
+  { label: 'Google Analytics 4 API', href: 'https://analytics.google.com/' },
+  { label: '아이티켓 공식 스토어', href: 'https://itket.com' },
+  { label: '방문자·세션·PV·체류시간 및 전환(견적·가입·주문) 집계' },
+];
 
 interface MonthViewProps {
   monthKey: string;
@@ -23,11 +32,9 @@ interface MonthViewProps {
   internal: InternalFilterConfig;
   chartMetric: MetricKey;
   shopTab: ShopTabKey;
-  convSel: string;
   convBy: ConvByKey;
   onChangeChartMetric: (m: MetricKey) => void;
   onChangeShopTab: (tab: ShopTabKey) => void;
-  onChangeConvSel: (id: string) => void;
   onChangeConvBy: (by: ConvByKey) => void;
   onOpenPage: (query: string) => void;
 }
@@ -39,17 +46,15 @@ export function MonthView({
   internal,
   chartMetric,
   shopTab,
-  convSel,
   convBy,
   onChangeChartMetric,
   onChangeShopTab,
-  onChangeConvSel,
   onChangeConvBy,
   onOpenPage,
 }: MonthViewProps) {
   const m = months[monthKey];
   if (!m) {
-    return <div className="empty">데이터 없음</div>;
+    return <MonthViewSkeleton />;
   }
 
   const prev = okM(months, prevKey(monthKey));
@@ -61,6 +66,27 @@ export function MonthView({
 
   return (
     <>
+      <PageHeader
+        id="pageHeaderMonth"
+        eyebrow="MONTHLY PERFORMANCE · 월간 실적 리포트"
+        title={`${monthKey.slice(0, 4)}년 ${+monthKey.slice(5)}월 실적 분석`}
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" />
+            <path d="M3 10h18" />
+            <path d="M8 2v4" />
+            <path d="M16 2v4" />
+          </svg>
+        }
+        meta={
+          m.partial ? (
+            <span className="tag warn">진행 중 ({m.daily.length}일차)</span>
+          ) : (
+            <span className="tag ok">마감 완료</span>
+          )
+        }
+      />
+
       <InternalFilterNote internal={internal} monthKey={monthKey} />
 
       {m.partial && (
@@ -81,15 +107,17 @@ export function MonthView({
         prevMonthData={prev}
         partialDays={partialDays}
         names={names}
-        convSel={convSel}
         convBy={convBy}
-        onChangeConvSel={onChangeConvSel}
         onChangeConvBy={onChangeConvBy}
         onOpenPage={onOpenPage}
       />
 
-      <div className="card">
-        <h2>
+      <section
+        className="card card-daily-chart"
+        id="sectionDailyChart"
+        aria-labelledby="headingDailyChart"
+      >
+        <h2 id="headingDailyChart">
           <span>일별 추이</span>
           <SegmentedControl
             items={METRICS}
@@ -102,12 +130,13 @@ export function MonthView({
           dates={m.daily.map((r) => r.date)}
           unit={chartMetric === 'signups' ? '건' : ''}
         />
-      </div>
+      </section>
 
       <PopularPagesCard
         pages={m.pages}
         totalViews={m.total.screenPageViews}
         susp={sp}
+        names={names}
         onOpenPage={onOpenPage}
       />
 
@@ -120,6 +149,8 @@ export function MonthView({
       />
 
       <WhyCard />
+
+      <SecSrc sources={MONTH_SOURCES} />
     </>
   );
 }

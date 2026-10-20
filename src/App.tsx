@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { ExportModal } from './components/ExportModal';
 import { Header } from './components/Header';
 import { LivePanel } from './components/LivePanel';
 import { MonthView } from './components/MonthView';
 import { PageAnalysisView } from './components/PageAnalysisView';
+import { PageDrawer } from './components/PageDrawer';
 import { Sidebar } from './components/Sidebar';
 import { YearView } from './components/YearView';
 import { useDashboardData } from './hooks/useDashboardData';
@@ -27,9 +29,12 @@ export function App() {
   const [chartMetric, setChartMetric] = useState<MetricKey>('activeUsers');
   const [annMetric, setAnnMetric] = useState<MetricKey>('sessions');
   const [shopTab, setShopTab] = useState<ShopTabKey>('goods');
-  const [convSel, setConvSel] = useState<string>('estimate');
   const [convBy, setConvBy] = useState<ConvByKey>('byMedium');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+
+  // 슬라이드오버 Drawer 상태
+  const [pageDrawerQuery, setPageDrawerQuery] = useState<string | null>(null);
 
   useEffect(() => {
     document.body.classList.toggle('lock', drawerOpen);
@@ -52,7 +57,6 @@ export function App() {
   }, []);
 
   const handleGoHome = () => {
-    setConvSel('estimate');
     setConvBy('byMedium');
     setChartMetric('activeUsers');
     setAnnMetric('sessions');
@@ -63,12 +67,23 @@ export function App() {
 
   const handleSelectPeriod = (period: string, keepDrawer = false) => {
     selectPeriod(period);
+    setPageDrawerQuery(null);
     if (!keepDrawer) setDrawerOpen(false);
   };
 
   const handleOpenPage = (q?: string, m?: string) => {
     openPage(q, m);
+    setPageDrawerQuery(null);
     setDrawerOpen(false);
+  };
+
+  // 테이블 행 클릭 시 슬라이드오버 Drawer 오픈
+  const handleOpenDrawerPage = (q: string) => {
+    setPageDrawerQuery(q);
+  };
+
+  const handleExportExcel = () => {
+    setExportModalOpen(true);
   };
 
   return (
@@ -96,6 +111,7 @@ export function App() {
           isDark={isDark}
           onOpenDrawer={() => setDrawerOpen(true)}
           onToggleTheme={toggleTheme}
+          onExportExcel={handleExportExcel}
         />
 
         <div className="cont">
@@ -112,6 +128,7 @@ export function App() {
                 liveUrl={data.liveUrl}
                 onOpenPage={handleOpenPage}
                 onChangeMonthOnly={setPageM}
+                onBackToDashboard={() => handleSelectPeriod(pageM || latestKey, false)}
               />
             ) : !keys.length ? (
               <div className="empty">
@@ -136,22 +153,37 @@ export function App() {
                 internal={data.internal}
                 chartMetric={chartMetric}
                 shopTab={shopTab}
-                convSel={convSel}
                 convBy={convBy}
                 onChangeChartMetric={setChartMetric}
                 onChangeShopTab={setShopTab}
-                onChangeConvSel={setConvSel}
                 onChangeConvBy={setConvBy}
-                onOpenPage={(q) => handleOpenPage(q, sel)}
+                onOpenPage={(q) => handleOpenDrawerPage(q)}
               />
             )}
           </main>
         </div>
-
-        <div className="foot">
-          출처: Google Analytics 4 기준입니다. 고도몰 통계와는 측정 방식이 달라, 인기 상품·카테고리·게시판 순위는 거의 같지만 방문자는 한가한 날 GA4가 적고, 내부 새로고침 트래픽이 있으면 페이지뷰가 크게 벌어질 수 있습니다.
-        </div>
       </div>
+
+      <ExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        data={data}
+        currentSel={sel}
+        keys={keys}
+        years={years}
+      />
+
+      <PageDrawer
+        isOpen={!!pageDrawerQuery}
+        onClose={() => setPageDrawerQuery(null)}
+        pageQ={pageDrawerQuery || ''}
+        pageM={sel}
+        keys={keys}
+        months={data.months}
+        names={data.names}
+        liveUrl={data.liveUrl}
+        onOpenFullPage={(q, m) => handleOpenPage(q, m)}
+      />
     </div>
   );
 }

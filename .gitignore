@@ -1,3 +1,10 @@
 node_modules/
 .sample/
 .playwright-mcp/
+.env
+.env.*
+!.env.example
+data/ref/.browser-profile*/
+data/ref/*.log
+data/ref/*.png
+*.png

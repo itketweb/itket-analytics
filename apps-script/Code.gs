@@ -2,7 +2,7 @@
  * itket-analytics 수집기 v2 (Google Apps Script)
  *
  * GA4 → 월별 JSON(드라이브 파일) + 실시간 현황을 웹앱 주소(doGet)로 내려준다.
- *  - collectRecent : 15분마다, 당월만 새로 수집 (대시보드가 2분마다 가져감)
+ *  - collectRecent : 30분마다, 당월만 새로 수집 (대시보드가 2분마다 가져감). 계정 공용 트리거 실행 시간(하루 90분)을 아끼려고 15분에서 늘림
  *  - collectAll    : 3시간마다, 당월·전월 갱신 + 빠진/구버전 과거 월 채움
  *  - ?mode=live    : GA4 Realtime API (지금 접속자·지금 보는 페이지), 20초 캐시
  *  - ?mode=cur     : 당월 + 전월 JSON (가벼움)
@@ -227,7 +227,7 @@ function checkProperty_() {
   if (/[^0-9]/.test(CFG.PROPERTY_ID)) throw new Error('CFG.PROPERTY_ID 에 GA4 속성 ID(숫자)를 넣어 주세요.');
 }
 
-/** 15분마다: 당월만 새로 수집(빠름). */
+/** 30분마다: 당월만 새로 수집(빠름). */
 function collectRecent() {
   checkProperty_();
   const lock = LockService.getScriptLock();
@@ -236,7 +236,7 @@ function collectRecent() {
     const today = todayKst_(), cur = today.slice(0, 7);
     const store = load_();
     try { store.months[cur] = collectMonth_(cur, today, store.months[cur]); }
-    catch (e) { if (/Exhausted|quota/i.test(String((e && e.message) || e))) return; throw e; }   // 시간당 한도 소진은 조용히 건너뜀(다음 15분에 재시도)
+    catch (e) { if (/Exhausted|quota/i.test(String((e && e.message) || e))) return; throw e; }   // 시간당 한도 소진은 조용히 건너뜀(다음 30분에 재시도)
     store.updated = new Date().toISOString();
     store.quota = LAST_QUOTA_ && { at: new Date().toISOString(), q: LAST_QUOTA_ };
     save_(store);
@@ -431,10 +431,10 @@ function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
 }
 
-/** 한 번만 실행: 자동 실행 트리거(15분 / 3시간)를 만든다. 다시 실행해도 중복되지 않는다. */
+/** 한 번만 실행: 자동 실행 트리거(30분 / 3시간)를 만든다. 다시 실행해도 중복되지 않는다. */
 function setupTrigger() {
   ScriptApp.getProjectTriggers().filter((t) => ['collectAll', 'collectRecent'].indexOf(t.getHandlerFunction()) >= 0).forEach((t) => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('collectRecent').timeBased().everyMinutes(15).create();
+  ScriptApp.newTrigger('collectRecent').timeBased().everyMinutes(30).create();
   ScriptApp.newTrigger('collectAll').timeBased().everyHours(3).create();
 }
 
