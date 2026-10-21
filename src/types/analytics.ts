@@ -1,6 +1,7 @@
 export type MetricKey = 'activeUsers' | 'sessions' | 'screenPageViews' | 'newUsers' | 'signups';
 export type ShopTabKey = 'goods' | 'categories' | 'boards';
 export type ConvByKey = 'byMedium' | 'byChannel' | 'byCampaign' | 'byLanding' | 'byGoods';
+export type ViewTab = 'overview' | 'conversion' | 'content' | 'page';
 
 export interface TotalMetrics {
   activeUsers: number;

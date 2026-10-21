@@ -16,11 +16,13 @@ export function App() {
   const { data, keys, years, latestKey } = useDashboardData();
   const {
     isPage,
+    currentTab,
     pageQ,
     pageM,
     sel,
     setPageM,
     selectPeriod,
+    selectTab,
     openPage,
     resetRoute,
   } = useHashRoute(keys, years, data.months);
@@ -91,14 +93,16 @@ export function App() {
       <Sidebar
         title={data.title}
         open={drawerOpen}
-        isPage={isPage}
+        currentTab={currentTab}
         sel={sel}
         years={years}
         months={data.months}
         onCloseDrawer={() => setDrawerOpen(false)}
         onGoHome={handleGoHome}
-        onGoDashboard={() => handleSelectPeriod(latestKey, false)}
-        onGoPageAnalysis={() => handleOpenPage(pageQ, pageM)}
+        onSelectTab={(tab) => {
+          selectTab(tab);
+          setDrawerOpen(false);
+        }}
         onSelectPeriod={handleSelectPeriod}
       />
 
@@ -151,6 +155,7 @@ export function App() {
                 months={data.months}
                 names={data.names}
                 internal={data.internal}
+                currentTab={currentTab as 'overview' | 'conversion' | 'content'}
                 chartMetric={chartMetric}
                 shopTab={shopTab}
                 convBy={convBy}

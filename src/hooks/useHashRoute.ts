@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { MonthData } from '../types/analytics';
+import type { MonthData, ViewTab } from '../types/analytics';
 
 interface RouteState {
   isPage: boolean;
   pageQ: string;
   pageM: string;
   sel: string;
+  tab: ViewTab;
 }
 
 function parseLocationHash(
@@ -30,16 +31,31 @@ function parseLocationHash(
       pageQ: q,
       pageM: m,
       sel: latestKey,
+      tab: 'page',
     };
   }
 
+  // 탭 지정 해시 지원: #conversion, #content, #conversion/2026-10 등
+  const firstPart = parts[0];
+  let tab: ViewTab = 'overview';
+  let periodPart = '';
+
+  if (firstPart === 'conversion' || firstPart === 'content' || firstPart === 'overview') {
+    tab = firstPart as ViewTab;
+    periodPart = parts[1] || '';
+  } else {
+    periodPart = firstPart;
+  }
+
   const validSel =
-    raw && (months[raw] || years.includes(raw)) ? raw : latestKey;
+    periodPart && (months[periodPart] || years.includes(periodPart)) ? periodPart : latestKey;
+
   return {
     isPage: false,
     pageQ: '',
     pageM: latestKey,
     sel: validSel,
+    tab,
   };
 }
 
@@ -59,11 +75,13 @@ export function useHashRoute(
   const [pageQ, setPageQ] = useState(initialRoute.pageQ);
   const [pageM, setPageM] = useState(initialRoute.pageM);
   const [sel, setSel] = useState(initialRoute.sel);
+  const [currentTab, setCurrentTab] = useState<ViewTab>(initialRoute.tab);
 
   useEffect(() => {
     const onHashChange = () => {
       const next = parseLocationHash(keys, years, months);
       setIsPage(next.isPage);
+      setCurrentTab(next.tab);
       if (next.isPage) {
         setPageQ(next.pageQ);
         setPageM((prevM) => next.pageM || prevM || latestKey);
@@ -75,18 +93,12 @@ export function useHashRoute(
     return () => window.removeEventListener('hashchange', onHashChange);
   }, [keys, years, months, latestKey]);
 
-  const selectPeriod = useCallback((period: string) => {
-    setIsPage(false);
-    setSel(period);
-    history.replaceState(null, '', `#${period}`);
-    window.scrollTo({ top: 0 });
-  }, []);
-
   const openPage = useCallback(
     (query?: string, month?: string) => {
       const trimmed = (query ?? '').trim();
       const targetM = month || pageM || latestKey;
       setIsPage(true);
+      setCurrentTab('page');
       setPageQ(trimmed);
       setPageM(targetM);
       history.replaceState(
@@ -99,8 +111,29 @@ export function useHashRoute(
     [pageM, latestKey],
   );
 
+  const selectPeriod = useCallback((period: string) => {
+    setIsPage(false);
+    setSel(period);
+    const hash = currentTab === 'overview' ? `#${period}` : `#${currentTab}/${period}`;
+    history.replaceState(null, '', hash);
+    window.scrollTo({ top: 0 });
+  }, [currentTab]);
+
+  const selectTab = useCallback((tab: ViewTab) => {
+    if (tab === 'page') {
+      openPage('', sel);
+      return;
+    }
+    setIsPage(false);
+    setCurrentTab(tab);
+    const hash = tab === 'overview' ? `#${sel}` : `#${tab}/${sel}`;
+    history.replaceState(null, '', hash);
+    window.scrollTo({ top: 0 });
+  }, [sel, openPage]);
+
   const resetRoute = useCallback(() => {
     setIsPage(false);
+    setCurrentTab('overview');
     setSel(latestKey);
     history.replaceState(null, '', location.pathname + location.search);
     window.scrollTo({ top: 0 });
@@ -108,11 +141,13 @@ export function useHashRoute(
 
   return {
     isPage,
+    currentTab,
     pageQ,
     pageM: pageM || latestKey,
     sel,
     setPageM,
     selectPeriod,
+    selectTab,
     openPage,
     resetRoute,
   };

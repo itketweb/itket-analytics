@@ -12,13 +12,13 @@
  */
 const CFG = {
   PROPERTY_ID: '257396991',   // GA4 관리 → 속성 설정 → 속성 ID
-  START_MONTH: '2025-01',
+  START_MONTH: '2023-01',
   SIGNUP_EVENT: 'sign_up',
   JOIN_DONE_PATH: '/member/join_ok.php',     // 회원가입 완료 화면 — 사이트가 sign_up 이벤트를 보내지 않을 때의 대체 기준
   TOP_ROWS: 50,
   FILE_NAME: 'itket-analytics-data.json',
   BUDGET_MS: 4.5 * 60 * 1000,                // 한 번 실행에 쓸 최대 시간(6분 제한 대비)
-  SCHEMA: 3,                                 // 수집 항목이 바뀌면 올린다 → 과거 월을 다시 채움 (3: 전환·이벤트·랜딩 추가)
+  SCHEMA: 4,                                 // 수집 항목이 바뀌면 올린다 → 과거 월을 다시 채움 (4: 2023-01부터 수집 범위 확장)
   MEASUREMENT_ID: 'G-EJ5SHHZPND',            // 참고용(데이터 스트림 식별). 수집에는 PROPERTY_ID 를 쓴다
   // 전환 정의: 이 화면(경로)을 본 세션을 "전환"으로 센다. 사이트가 전환 이벤트를 보내지 않아 화면 기준으로 센다.
   // 바꾸려면 여기만 고치고 SCHEMA 숫자를 올린다. path 는 정확히 일치해야 한다.
