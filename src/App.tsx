@@ -157,6 +157,7 @@ export function App() {
                 year={sel}
                 months={data.months}
                 godoSignups={data.godoSignups}
+                godoQuotes={data.godoQuotes}
                 annMetric={annMetric}
                 onChangeAnnMetric={setAnnMetric}
                 onSelectMonth={(mKey) => handleSelectPeriod(mKey, false)}
@@ -167,6 +168,7 @@ export function App() {
                 months={data.months}
                 names={data.names}
                 internal={data.internal}
+                godoQuotes={data.godoQuotes}
                 currentTab={currentTab as 'overview' | 'conversion' | 'content'}
                 chartMetric={chartMetric}
                 shopTab={shopTab}

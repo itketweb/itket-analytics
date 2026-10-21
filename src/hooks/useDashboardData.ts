@@ -4,6 +4,7 @@ import type { DashboardPayload, MonthData } from '../types/analytics';
 const DEFAULT_DATA: DashboardPayload = {
   names: {},
   godoSignups: null,
+  godoQuotes: null,
   title: '아이티켓 애널리틱스',
   siteUrl: 'https://itket.com',
   internal: { state: 'pending', since: null },

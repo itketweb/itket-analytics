@@ -56,7 +56,7 @@ export const MonthPicker: React.FC<MonthPickerProps> = ({
   const monthOptions = [
     {
       value: 0,
-      label: '연간 전체',
+      label: '전체',
       disabled: false,
     },
     ...Array.from({ length: 12 }, (_, i) => {

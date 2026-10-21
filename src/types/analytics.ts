@@ -151,6 +151,15 @@ export interface GodomallSignups {
   daily?: Record<string, number>;
 }
 
+export interface GodomallQuotes {
+  asOf?: string;
+  source?: string;
+  note?: string;
+  monthly: Record<string, number>;
+  daily?: Record<string, number>;
+  byCategory?: Record<string, Record<string, number>>;
+}
+
 export interface InternalFilterConfig {
   state: 'pending' | 'testing' | 'active';
   since: string | null;
@@ -164,6 +173,7 @@ export interface MetaInfo {
 export interface DashboardPayload {
   names: NamesMap;
   godoSignups: GodomallSignups | null;
+  godoQuotes: GodomallQuotes | null;
   title: string;
   siteUrl: string;
   internal: InternalFilterConfig;

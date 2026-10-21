@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type {
   ConvByKey,
   ConversionDef,
+  GodomallQuotes,
   MonthData,
   NamesMap,
 } from '../types/analytics';
@@ -17,6 +18,7 @@ interface ConversionSectionProps {
   prevMonthData?: MonthData;
   partialDays: number | null;
   names: NamesMap;
+  godoQuotes?: GodomallQuotes | null;
   convBy: ConvByKey;
   onChangeConvBy: (by: ConvByKey) => void;
   onOpenPage: (query: string) => void;
@@ -129,6 +131,7 @@ export function ConversionSection({
   prevMonthData,
   partialDays,
   names,
+  godoQuotes,
   convBy,
   onChangeConvBy,
   onOpenPage,
@@ -196,34 +199,83 @@ export function ConversionSection({
         ariaLabel="전환 목표별 지표"
         items={defs.map((d) => {
           const t = c.total[d.id] || { sessions: 0 };
-          const cur = t.sessions;
-          const pv =
-            prevMonthData && prevMonthData.conv
-              ? partialDays
-                ? convDaily(prevMonthData, d.id, partialDays)
-                : (prevMonthData.conv.total[d.id] || {}).sessions
+          const isEstimate = d.id === 'estimate';
+          const godoEst =
+            isEstimate && godoQuotes && godoQuotes.monthly
+              ? godoQuotes.monthly[monthData.month]
               : null;
+          const prevGodoEst =
+            isEstimate && godoQuotes && prevMonthData && godoQuotes.monthly
+              ? godoQuotes.monthly[prevMonthData.month]
+              : null;
+
+          const cur = godoEst != null ? godoEst : t.sessions;
+          const pv =
+            godoEst != null
+              ? prevGodoEst
+              : prevMonthData && prevMonthData.conv
+                ? partialDays
+                  ? convDaily(prevMonthData, d.id, partialDays)
+                  : (prevMonthData.conv.total[d.id] || {}).sessions
+                : null;
+
+          const cats =
+            isEstimate && godoQuotes && godoQuotes.byCategory
+              ? godoQuotes.byCategory[monthData.month]
+              : null;
+
           return {
-            label: d.name,
+            label: isEstimate && godoEst != null ? `${d.name} (실제 접수)` : d.name,
             value: cur,
             badge:
               pv != null ? (
                 <DeltaBadge
                   cur={
-                    partialDays ? convDaily(monthData, d.id, partialDays) : cur
+                    godoEst != null
+                      ? cur
+                      : partialDays
+                        ? convDaily(monthData, d.id, partialDays)
+                        : cur
                   }
                   prev={pv}
                   label={partialDays ? '전월 동기간' : '전월'}
                 />
               ) : null,
-            sub: (
-              <div
-                className="l sub1 sub-top"
-                title={`${d.path} 화면을 본 세션 수 ÷ 전체 세션`}
-              >
-                전환율 {pct(cur, monthData.total.sessions)}
-              </div>
-            ),
+            sub:
+              isEstimate && godoEst != null ? (
+                <div
+                  className="l sub1 sub-top"
+                  title={`고도몰 DB 견적 실접수 ${godoEst}건 / GA4 완료 세션 ${t.sessions}회`}
+                >
+                  <div style={{ color: 'var(--accent, #2563eb)', fontWeight: 600 }}>
+                    고도몰 DB 실건수
+                  </div>
+                  <div style={{ fontSize: '0.85em', opacity: 0.85, marginTop: '2px' }}>
+                    GA4 웹세션 {t.sessions}회 · 웹전환율 {pct(t.sessions, monthData.total.sessions)}
+                  </div>
+                  {cats && (
+                    <div
+                      style={{
+                        fontSize: '0.8em',
+                        color: 'var(--text-muted, #64748b)',
+                        marginTop: '4px',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {Object.entries(cats)
+                        .map(([k, v]) => `${k} ${v}`)
+                        .join(' · ')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className="l sub1 sub-top"
+                  title={`${d.path} 화면을 본 세션 수 ÷ 전체 세션`}
+                >
+                  전환율 {pct(cur, monthData.total.sessions)}
+                </div>
+              ),
           };
         })}
       />
@@ -236,6 +288,16 @@ export function ConversionSection({
         <div className="card-head-bar">
           <h2 id="headingConversion">
             <span>전환 분석</span>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 400,
+                color: 'var(--text-muted, #64748b)',
+                marginLeft: '8px',
+              }}
+            >
+              (유입 경로별 추적은 GA4 웹 세션 기준)
+            </span>
           </h2>
           <SegmentedControl
             items={CONV_BY}

@@ -66,12 +66,17 @@ export function loadDashboardPayload(mode = process.env.NODE_ENV || 'development
   const godoSignups = fs.existsSync(refFile)
     ? JSON.parse(fs.readFileSync(refFile, 'utf8'))
     : null;
+  const quotesRefFile = path.join(dataDir, 'ref', 'godomall-quotes.json');
+  const godoQuotes = fs.existsSync(quotesRefFile)
+    ? JSON.parse(fs.readFileSync(quotesRefFile, 'utf8'))
+    : null;
 
   return {
     fileCount: files.length,
     payload: {
       names,
       godoSignups,
+      godoQuotes,
       title: cfg.title as string,
       siteUrl: cfg.siteUrl as string,
       internal: cfg.internalFilter || { state: 'pending', since: null },

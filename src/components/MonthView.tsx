@@ -1,5 +1,6 @@
 import type {
   ConvByKey,
+  GodomallQuotes,
   InternalFilterConfig,
   MetricKey,
   MonthData,
@@ -30,6 +31,7 @@ interface MonthViewProps {
   months: Record<string, MonthData>;
   names: NamesMap;
   internal: InternalFilterConfig;
+  godoQuotes?: GodomallQuotes | null;
   currentTab: 'overview' | 'conversion' | 'content';
   chartMetric: MetricKey;
   shopTab: ShopTabKey;
@@ -45,6 +47,7 @@ export function MonthView({
   months,
   names,
   internal,
+  godoQuotes,
   currentTab,
   chartMetric,
   shopTab,
@@ -150,6 +153,7 @@ export function MonthView({
           prevMonthData={prev}
           partialDays={partialDays}
           names={names}
+          godoQuotes={godoQuotes}
           convBy={convBy}
           onChangeConvBy={onChangeConvBy}
           onOpenPage={onOpenPage}

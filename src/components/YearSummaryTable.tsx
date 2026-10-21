@@ -1,4 +1,5 @@
 import type {
+  GodomallQuotes,
   GodomallSignups,
   MetricKey,
   MonthData,
@@ -11,6 +12,7 @@ interface YearSummaryTableProps {
   ks: string[];
   months: Record<string, MonthData>;
   godoSignups: GodomallSignups | null;
+  godoQuotes?: GodomallQuotes | null;
   onSelectMonth: (monthKey: string) => void;
 }
 
@@ -26,11 +28,17 @@ export function YearSummaryTable({
   ks,
   months,
   godoSignups,
+  godoQuotes,
   onSelectMonth,
 }: YearSummaryTableProps) {
   const val = (k: string, key: MetricKey) =>
     months[k] ? metricOf(months[k], key) : 0;
   const sum = (key: MetricKey) => ks.reduce((a, k) => a + val(k, key), 0);
+  const quoteSum = ks.reduce((a, k) => {
+    if (godoQuotes && godoQuotes.monthly[k] != null) return a + godoQuotes.monthly[k];
+    const m = okM(months, k);
+    return a + (m?.conv?.total?.estimate?.sessions || 0);
+  }, 0);
 
   return (
     <section
@@ -55,6 +63,7 @@ export function YearSummaryTable({
               <th className="n th-stat">페이지뷰</th>
               <th className="n th-stat">신규 방문자</th>
               <th className="n th-stat">회원가입</th>
+              <th className="n th-stat">견적요청</th>
             </tr>
           </thead>
           <tbody>
@@ -65,6 +74,12 @@ export function YearSummaryTable({
                 godoSignups && godoSignups.monthly[k] != null
                   ? `${godoSignups.monthly[k]}*`
                   : '―';
+              const godoEstVal =
+                godoQuotes && godoQuotes.monthly[k] != null
+                  ? `${godoQuotes.monthly[k]}*`
+                  : m?.conv?.total?.estimate?.sessions != null
+                    ? `${m.conv.total.estimate.sessions}`
+                    : '―';
               return (
                 <tr
                   key={k}
@@ -80,7 +95,7 @@ export function YearSummaryTable({
                       <td
                         className="td-notice muted"
                         colSpan={4}
-                        title="해당 기간은 방문 데이터가 집계되지 않은 기간입니다 (회원가입 실적은 정상 집계)"
+                        title="해당 기간은 방문 데이터가 집계되지 않은 기간입니다 (회원가입·견적 실적은 정상 집계)"
                       >
                         방문 데이터 미집계 기간
                       </td>
@@ -90,15 +105,26 @@ export function YearSummaryTable({
                       >
                         {godoVal}
                       </td>
+                      <td
+                        className="n"
+                        title="고도몰 DB 견적 실접수 건수 (참고용)"
+                      >
+                        {godoEstVal}
+                      </td>
                     </>
                   ) : m ? (
-                    TABLE_METRICS.map((key) => (
-                      <td key={key} className="n">
-                        {fmt(metricOf(m, key))}
+                    <>
+                      {TABLE_METRICS.map((key) => (
+                        <td key={key} className="n">
+                          {fmt(metricOf(m, key))}
+                        </td>
+                      ))}
+                      <td className="n" title="고도몰 DB 견적 실접수 건수">
+                        {godoEstVal}
                       </td>
-                    ))
+                    </>
                   ) : (
-                    <td className="td-notice muted" colSpan={5}>
+                    <td className="td-notice muted" colSpan={6}>
                       ―
                     </td>
                   )}
@@ -121,13 +147,16 @@ export function YearSummaryTable({
                   </td>
                 ),
               )}
+              <td className="n td-stat td-total-val">
+                <b>{fmt(quoteSum)}*</b>
+              </td>
             </tr>
           </tfoot>
         </table>
       </div>
       <div className="tbl-foot">
         <div className="foot-left">
-          <b>방문자</b> 일별 합산 · <b>세션·PV·신규</b> GA4 기준 · <b>회원가입</b> 가입완료 기준 (*고도몰 DB 실가입)
+          <b>방문자</b> 일별 합산 · <b>세션·PV·신규</b> GA4 기준 · <b>회원가입·견적요청</b> (*고도몰 DB 실접수)
         </div>
         <div className="foot-right">
           단위: 명·회·건

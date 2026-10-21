@@ -6,7 +6,8 @@
   "description": "itket.com GA4 월간 대시보드 (React + TypeScript + SCSS + Vite)",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && node scripts/build-site.mjs",
+    "sync:quotes": "node scripts/sync-godomall-quotes.mjs",
+    "build": "node scripts/sync-godomall-quotes.mjs && tsc -b && node scripts/build-site.mjs",
     "preview": "vite preview --outDir site",
     "typecheck": "tsc -b",
     "collect": "node scripts/collect.mjs",

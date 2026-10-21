@@ -2450,11 +2450,12 @@ body.drawer-open-lock {
   }
 
   .mp-month {
-    width: 6.25rem;
+    width: 4.75rem;
 
     .dd-trigger {
       width: 100%;
       min-width: 0;
+      padding: 0 0.5rem 0 0.625rem;
     }
   }
 

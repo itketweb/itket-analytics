@@ -1,4 +1,5 @@
 import type {
+  GodomallQuotes,
   GodomallSignups,
   MetricKey,
   MonthData,
@@ -23,6 +24,7 @@ interface YearViewProps {
   year: string;
   months: Record<string, MonthData>;
   godoSignups: GodomallSignups | null;
+  godoQuotes?: GodomallQuotes | null;
   annMetric: MetricKey;
   onChangeAnnMetric: (m: MetricKey) => void;
   onSelectMonth: (monthKey: string) => void;
@@ -40,6 +42,7 @@ export function YearView({
   year,
   months,
   godoSignups,
+  godoQuotes,
   annMetric,
   onChangeAnnMetric,
   onSelectMonth,
@@ -151,6 +154,7 @@ export function YearView({
         ks={ks}
         months={months}
         godoSignups={godoSignups}
+        godoQuotes={godoQuotes}
         onSelectMonth={onSelectMonth}
       />
 
