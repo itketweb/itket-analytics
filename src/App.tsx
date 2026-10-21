@@ -69,7 +69,12 @@ export function App() {
   };
 
   const handleSelectPeriod = (period: string, keepDrawer = false) => {
-    selectPeriod(period);
+    if (isPage) {
+      setPageM(period);
+      openPage(pageQ, period);
+    } else {
+      selectPeriod(period);
+    }
     setPageDrawerQuery(null);
     if (!keepDrawer) setDrawerOpen(false);
   };
@@ -115,10 +120,10 @@ export function App() {
           onExportExcel={handleExportExcel}
         />
 
-        {!isPage && keys.length > 0 && (
+        {keys.length > 0 && (
           <PeriodNav
             years={years}
-            selectedPeriod={sel}
+            selectedPeriod={isPage ? (pageM || latestKey) : sel}
             minAvailableMonth={keys[0]}
             maxAvailableMonth={latestKey}
             onSelectPeriod={(period) => handleSelectPeriod(period, false)}
