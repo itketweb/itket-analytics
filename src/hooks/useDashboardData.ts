@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { DashboardPayload, MonthData } from '../types/analytics';
+import type { DashboardPayload, GodomallQuotes, MonthData } from '../types/analytics';
 
 const DEFAULT_DATA: DashboardPayload = {
   names: {},
@@ -35,6 +35,7 @@ export function useDashboardData() {
       const payload = (await res.json()) as {
         months?: Record<string, MonthData>;
         updated?: string;
+        godoQuotes?: GodomallQuotes | null;
       };
       if (!payload.months) return;
 
@@ -55,11 +56,17 @@ export function useDashboardData() {
         if (nextUpdated !== prev.meta.updated) {
           changed = true;
         }
+        const nextGodoQuotes =
+          'godoQuotes' in payload ? (payload.godoQuotes ?? null) : prev.godoQuotes;
+        if (nextGodoQuotes !== prev.godoQuotes) {
+          changed = true;
+        }
         if (!changed) return prev;
         return {
           ...prev,
           months: nextMonths,
           meta: { ...prev.meta, updated: nextUpdated },
+          godoQuotes: nextGodoQuotes,
         };
       });
     } catch {

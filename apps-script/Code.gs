@@ -10,6 +10,9 @@
  * 서비스 계정·JSON 키 불필요 — 이 스크립트를 만든 구글 계정의 GA4 권한으로 읽는다.
  * 처음 설정은 저장소 README 의 "처음 한 번만" 참고. 코드를 고치면 "배포 관리 → 새 버전"으로 다시 배포.
  */
+// 견적 요청 실접수 집계용 스프레드시트 (견적문의 시트)
+const QUOTES_SHEET_ID = '18tMYBQLuIhkmX_x_c8MK-aNXlGvOgz1TWauvqo8Dmjg';
+
 const CFG = {
   PROPERTY_ID: '257396991',   // GA4 관리 → 속성 설정 → 속성 ID
   START_MONTH: '2025-01',
@@ -414,6 +417,69 @@ function pageStats_(q, month) {
   }
 }
 
+/** 제목 키워드로 견적 카테고리 분류. 워크스테이션 → 서버 → 스토리지 → PC·노트북 → 기타 순으로 판별. */
+function classifyTitle_(title) {
+  const t = String(title || '');
+  if (/workstation|워크스테이션|zbook|z\s*by\s*hp|zgx|z\d+\s*(tower|mini|g\d)|z\d+(g\d)?/i.test(t)) return '워크스테이션';
+  if (/서버|server|proliant|poweredge|dl\d+|ml\d+|bl\d+|supermicro|gpu\s*서버|ai\s*서버|xeon|epyc|r\d{3,}[a-z]?g|esc\d+|rs\d+|\d+u\s*rack|rack\s*서버|타워\s*서버|hpe\s|dell\s*(r|m|t)\d/i.test(t)) return '서버';
+  if (/스토리지|storage|nas\b|san\b|qnap|synology|netapp|백업|backup|\d+\s*bay|오브젝트\s*스토리지/i.test(t)) return '스토리지';
+  if (/노트북|laptop|notebook|데스크탑|desktop|미니\s*pc|mini.{0,3}pc|all.in.one|elitebook|hp\s+envy|서피스|surface\b|pc\s*구매/i.test(t)) return 'PC·노트북';
+  return '기타';
+}
+
+/** 견적 스프레드시트(견적문의 시트)에서 월별·일별·카테고리별 접수 건수를 집계한다. 30분 캐시. */
+function quotesData_() {
+  const cache = CacheService.getScriptCache();
+  const ck = 'quotesData_v2';
+  const hit = cache.get(ck);
+  if (hit) { try { return JSON.parse(hit); } catch (e) { /* 캐시 손상 — 재계산 */ } }
+  try {
+    const ss = SpreadsheetApp.openById(QUOTES_SHEET_ID);
+    const sheet = ss.getSheetByName('견적문의');
+    if (!sheet) return null;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return null;
+    // A:접수번호 B:제목 C:담당자 D:이메일 E:기관명 F:영업담당 G:접수날짜 H:sno I:유입경로
+    const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+    const today = todayKst_();
+    const monthly = {}, daily = {}, byCategory = {};
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const dateVal = row[6]; // G: 접수날짜
+      if (!dateVal) continue;
+      let ds;
+      if (dateVal instanceof Date) {
+        ds = Utilities.formatDate(dateVal, 'Asia/Seoul', 'yyyy-MM-dd');
+      } else {
+        const s = String(dateVal).trim();
+        const m = s.match(/(\d{4})[.\-\s](\d{1,2})[.\-\s](\d{1,2})/);
+        if (!m) continue;
+        ds = m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+      }
+      if (ds > today || ds < '2021-01-01') continue;
+      const mk = ds.slice(0, 7);
+      const cat = classifyTitle_(String(row[1] || ''));
+      monthly[mk] = (monthly[mk] || 0) + 1;
+      daily[ds] = (daily[ds] || 0) + 1;
+      if (!byCategory[mk]) byCategory[mk] = {};
+      byCategory[mk][cat] = (byCategory[mk][cat] || 0) + 1;
+    }
+    const result = {
+      asOf: today,
+      source: '구글 스프레드시트(고도몰 es_dbkEstimate DB 실접수 내역) 연동',
+      note: '견적 요청 실제 접수 건수 (월별 및 일별 실데이터)',
+      monthly: monthly,
+      daily: daily,
+      byCategory: byCategory,
+    };
+    cache.put(ck, JSON.stringify(result), 1800); // 30분 캐시
+    return result;
+  } catch (e) {
+    Logger.log('quotesData_ 오류: ' + String(e && e.message || e));
+    return null;
+  }
+}
+
 /** 웹앱: ?mode=live | ?mode=cur | ?mode=page&q=..&month=.. | (기본) 전체. */
 function doGet(e) {
   const mode = e && e.parameter && e.parameter.mode;
@@ -425,8 +491,12 @@ function doGet(e) {
       const store = load_(), cur = todayKst_().slice(0, 7), prev = addMonth_(cur, -1);
       const months = {};
       [cur, prev].forEach((m) => { if (store.months[m]) months[m] = store.months[m]; });
-      body = { updated: store.updated, months: months, quota: store.quota || null };
-    } else body = load_();
+      body = { updated: store.updated, months: months, quota: store.quota || null, godoQuotes: quotesData_() };
+    } else {
+      const store = load_();
+      body = JSON.parse(JSON.stringify(store)); // shallow copy
+      body.godoQuotes = quotesData_();
+    }
   } catch (err) { body = { error: String(err && err.message || err) }; }
   return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
 }

@@ -105,6 +105,13 @@ if (process.env.GA4_WEBAPP_URL) {
   for (const m of got) fs.writeFileSync(path.join(OUT, `${m}.json`), JSON.stringify(store.months[m]));
   fs.writeFileSync(path.join(OUT, '_meta.json'), JSON.stringify({ updated: store.updated || new Date().toISOString(), failed: (store.errors || []).length }));
   console.log(`웹앱에서 ${got.length}개월 받음 (수집기 갱신 ${store.updated || '알 수 없음'})`);
+  if (store.godoQuotes) {
+    const refDir = path.join(ROOT, 'data', 'ref');
+    fs.mkdirSync(refDir, { recursive: true });
+    fs.writeFileSync(path.join(refDir, 'godomall-quotes.json'), JSON.stringify(store.godoQuotes, null, 2));
+    const total = Object.values(store.godoQuotes.monthly || {}).reduce((a, v) => a + v, 0);
+    console.log(`고도몰 견적 건수 저장 완료 (전체 ${total}건, 기준일 ${store.godoQuotes.asOf || '알 수 없음'})`);
+  }
   if ((store.errors || []).length) { console.error('수집기 오류:', store.errors.join(' / ')); process.exit(1); }
   process.exit(0);
 }
