@@ -112,15 +112,6 @@ textarea:focus-visible {
   outline: none;
 }
 
-.mons,
-.years {
-  scrollbar-width: none;
-}
-
-.mons::-webkit-scrollbar {
-  display: none;
-}
-
 .muted {
   color: var(--sub);
 }

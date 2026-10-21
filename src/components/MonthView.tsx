@@ -1,5 +1,7 @@
 import type {
   ConvByKey,
+  GodomallQuotes,
+  GodomallSignups,
   InternalFilterConfig,
   MetricKey,
   MonthData,
@@ -17,7 +19,7 @@ import { PopularPagesCard } from './PopularPagesCard';
 import { SegmentedControl } from './SegmentedControl';
 import { ShopCard } from './ShopCard';
 import { WhyCard } from './WhyCard';
-import { SecSrc, type SourceLinkItem } from './SecSrc';
+import { SourceNotice, type SourceLinkItem } from './SourceNotice';
 
 const MONTH_SOURCES: SourceLinkItem[] = [
   { label: 'Google Analytics 4 API', href: 'https://analytics.google.com/' },
@@ -30,6 +32,9 @@ interface MonthViewProps {
   months: Record<string, MonthData>;
   names: NamesMap;
   internal: InternalFilterConfig;
+  godoSignups?: GodomallSignups | null;
+  godoQuotes?: GodomallQuotes | null;
+  currentTab: 'overview' | 'conversion' | 'content';
   chartMetric: MetricKey;
   shopTab: ShopTabKey;
   convBy: ConvByKey;
@@ -44,6 +49,9 @@ export function MonthView({
   months,
   names,
   internal,
+  godoSignups,
+  godoQuotes,
+  currentTab,
   chartMetric,
   shopTab,
   convBy,
@@ -68,8 +76,20 @@ export function MonthView({
     <>
       <PageHeader
         id="pageHeaderMonth"
-        eyebrow="MONTHLY PERFORMANCE · 월간 실적 리포트"
-        title={`${monthKey.slice(0, 4)}년 ${+monthKey.slice(5)}월 실적 분석`}
+        eyebrow={
+          currentTab === 'conversion'
+            ? 'CONVERSION INTELLIGENCE · 목표 달성 성과'
+            : currentTab === 'content'
+              ? 'PAGES & PRODUCTS · 트래픽 및 인기 항목'
+              : 'MONTHLY PERFORMANCE · 월간 실적 리포트'
+        }
+        title={
+          currentTab === 'conversion'
+            ? `${monthKey.slice(0, 4)}년 ${+monthKey.slice(5)}월 전환 성과 분석`
+            : currentTab === 'content'
+              ? `${monthKey.slice(0, 4)}년 ${+monthKey.slice(5)}월 페이지 · 상품 랭킹`
+              : `${monthKey.slice(0, 4)}년 ${+monthKey.slice(5)}월 실적 분석`
+        }
         icon={
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="4" rx="2" />
@@ -95,62 +115,79 @@ export function MonthView({
         </div>
       )}
 
-      <MonthKpiCards
-        monthData={m}
-        prevMonthData={prev}
-        yoyMonthData={yoy}
-        suspExcess={sp.excess}
-      />
-
-      <ConversionSection
-        monthData={m}
-        prevMonthData={prev}
-        partialDays={partialDays}
-        names={names}
-        convBy={convBy}
-        onChangeConvBy={onChangeConvBy}
-        onOpenPage={onOpenPage}
-      />
-
-      <section
-        className="card card-daily-chart"
-        id="sectionDailyChart"
-        aria-labelledby="headingDailyChart"
-      >
-        <h2 id="headingDailyChart">
-          <span>일별 추이</span>
-          <SegmentedControl
-            items={METRICS}
-            value={chartMetric}
-            onChange={onChangeChartMetric}
+      {/* 1. 종합 요약 (overview): KPI 요약 카드 + 일별 추이 차트 + 분석 각주 */}
+      {currentTab === 'overview' && (
+        <>
+          <MonthKpiCards
+            monthData={m}
+            prevMonthData={prev}
+            yoyMonthData={yoy}
+            suspExcess={sp.excess}
+            godoSignups={godoSignups}
+            godoQuotes={godoQuotes}
           />
-        </h2>
-        <DailyChart
-          vals={series.map((r) => r[chartMetric])}
-          dates={m.daily.map((r) => r.date)}
-          unit={chartMetric === 'signups' ? '건' : ''}
+
+          <section
+            className="card card-daily-chart"
+            id="sectionDailyChart"
+            aria-labelledby="headingDailyChart"
+          >
+            <h2 id="headingDailyChart">
+              <span>일별 추이</span>
+              <SegmentedControl
+                items={METRICS}
+                value={chartMetric}
+                onChange={onChangeChartMetric}
+              />
+            </h2>
+            <DailyChart
+              vals={series.map((r) => r[chartMetric])}
+              dates={m.daily.map((r) => r.date)}
+              unit={chartMetric === 'signups' ? '건' : ''}
+            />
+          </section>
+
+          <WhyCard />
+        </>
+      )}
+
+      {/* 2. 전환 분석 (conversion): 견적/가입/주문 3대 전환 통합 분석 표 */}
+      {currentTab === 'conversion' && (
+        <ConversionSection
+          monthData={m}
+          prevMonthData={prev}
+          partialDays={partialDays}
+          names={names}
+          godoSignups={godoSignups}
+          godoQuotes={godoQuotes}
+          convBy={convBy}
+          onChangeConvBy={onChangeConvBy}
+          onOpenPage={onOpenPage}
         />
-      </section>
+      )}
 
-      <PopularPagesCard
-        pages={m.pages}
-        totalViews={m.total.screenPageViews}
-        susp={sp}
-        names={names}
-        onOpenPage={onOpenPage}
-      />
+      {/* 3. 페이지 · 상품 (content): 인기 페이지 TOP 15 + 고도몰 상품/카테고리/게시판 */}
+      {currentTab === 'content' && (
+        <>
+          <PopularPagesCard
+            pages={m.pages}
+            totalViews={m.total.screenPageViews}
+            susp={sp}
+            names={names}
+            onOpenPage={onOpenPage}
+          />
 
-      <ShopCard
-        monthData={m}
-        names={names}
-        shopTab={shopTab}
-        onChangeShopTab={onChangeShopTab}
-        onOpenPage={onOpenPage}
-      />
+          <ShopCard
+            monthData={m}
+            names={names}
+            shopTab={shopTab}
+            onChangeShopTab={onChangeShopTab}
+            onOpenPage={onOpenPage}
+          />
+        </>
+      )}
 
-      <WhyCard />
-
-      <SecSrc sources={MONTH_SOURCES} />
+      <SourceNotice sources={MONTH_SOURCES} />
     </>
   );
 }

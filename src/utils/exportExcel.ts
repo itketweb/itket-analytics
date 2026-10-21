@@ -30,11 +30,14 @@ export async function exportFilteredExcel(
 
     if (sheets.kpi || sheets.daily) {
       const summaryRows: Array<Array<string | number>> = [
-        ['월', '방문자', '신규 방문자', '세션', '페이지뷰', '회원가입'],
+        ['월', '방문자', '신규 방문자', '세션', '페이지뷰', '회원가입 (실가입)', '견적요청 (실접수)'],
       ];
 
       for (const mKey of months) {
         const m = data.months[mKey];
+        const godoSign = data.godoSignups?.monthly?.[mKey];
+        const godoEst = data.godoQuotes?.monthly?.[mKey];
+
         if (m && okM(data.months, mKey)) {
           summaryRows.push([
             `${+mKey.slice(5)}월`,
@@ -42,10 +45,19 @@ export async function exportFilteredExcel(
             metricOf(m, 'newUsers'),
             metricOf(m, 'sessions'),
             metricOf(m, 'screenPageViews'),
-            metricOf(m, 'signups'),
+            godoSign != null ? godoSign : metricOf(m, 'signups'),
+            godoEst != null ? godoEst : (m.conv?.total?.estimate?.sessions || 0),
           ]);
         } else {
-          summaryRows.push([`${+mKey.slice(5)}월`, 0, 0, 0, 0, 0]);
+          summaryRows.push([
+            `${+mKey.slice(5)}월`,
+            0,
+            0,
+            0,
+            0,
+            godoSign != null ? godoSign : 0,
+            godoEst != null ? godoEst : 0,
+          ]);
         }
       }
 
@@ -71,6 +83,9 @@ export async function exportFilteredExcel(
 
   // 시트 1: 핵심 지표 요약
   if (sheets.kpi) {
+    const godoSign = data.godoSignups?.monthly?.[period];
+    const godoEst = data.godoQuotes?.monthly?.[period];
+
     const kpiRows: Array<Array<string | number>> = [
       ['지표명', `${period} 실적`, '비고'],
       ['방문자 (일별 합산)', metricOf(m, 'activeUsers'), '고도몰 통계 기준'],
@@ -78,7 +93,8 @@ export async function exportFilteredExcel(
       ['신규 방문자', metricOf(m, 'newUsers'), ''],
       ['세션', metricOf(m, 'sessions'), ''],
       ['페이지뷰', metricOf(m, 'screenPageViews'), ''],
-      ['회원가입', metricOf(m, 'signups'), ''],
+      ['회원가입 (실가입)', godoSign != null ? godoSign : metricOf(m, 'signups'), '고도몰 DB 기준'],
+      ['견적요청 (실접수)', godoEst != null ? godoEst : (m.conv?.total?.estimate?.sessions || 0), '고도몰 DB 기준'],
       [
         '평균 체류시간(초)',
         m.total.activeUsers
@@ -94,11 +110,12 @@ export async function exportFilteredExcel(
   // 시트 2: 일별 추이
   if (sheets.daily && m.daily && m.daily.length > 0) {
     const dailyRows: Array<Array<string | number>> = [
-      ['날짜', '방문자', '신규 방문자', '세션', '페이지뷰', '회원가입', '평균 체류시간(초)'],
+      ['날짜', '방문자', '신규 방문자', '세션', '페이지뷰', '회원가입', '견적요청 (실접수)', '평균 체류시간(초)'],
     ];
     for (const d of m.daily) {
       const signupsVal =
         (m.signups || []).find((s) => s.date === d.date)?.count || 0;
+      const estVal = data.godoQuotes?.daily?.[d.date] || 0;
       const avgDur = d.activeUsers
         ? Math.round(d.userEngagementDuration / d.activeUsers)
         : 0;
@@ -109,6 +126,7 @@ export async function exportFilteredExcel(
         d.sessions || 0,
         d.screenPageViews || 0,
         signupsVal,
+        estVal,
         avgDur,
       ]);
     }

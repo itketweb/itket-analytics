@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import type {
   ConvByKey,
   ConversionDef,
+  GodomallQuotes,
+  GodomallSignups,
   MonthData,
   NamesMap,
 } from '../types/analytics';
@@ -17,6 +19,8 @@ interface ConversionSectionProps {
   prevMonthData?: MonthData;
   partialDays: number | null;
   names: NamesMap;
+  godoSignups?: GodomallSignups | null;
+  godoQuotes?: GodomallQuotes | null;
   convBy: ConvByKey;
   onChangeConvBy: (by: ConvByKey) => void;
   onOpenPage: (query: string) => void;
@@ -124,34 +128,29 @@ function buildConversionRows(
   return merged.slice(0, 15);
 }
 
+const FALLBACK_DEFS: ConversionDef[] = [
+  { id: 'estimate', name: '견적 요청', path: '/dbk/dbk_estimate_complete.php' },
+  { id: 'signup', name: '회원가입 완료', path: '/member/join_ok.php' },
+  { id: 'order', name: '주문 완료', path: '/order/order_end.php' },
+];
+
 export function ConversionSection({
   monthData,
   prevMonthData,
   partialDays,
   names,
+  godoSignups,
+  godoQuotes,
   convBy,
   onChangeConvBy,
   onOpenPage,
 }: ConversionSectionProps) {
   const c = monthData.conv;
-  if (!c) {
-    return (
-      <section className="card card-conversion-empty" id="sectionConversionEmpty">
-        <h2>전환</h2>
-        <div className="empty">
-          이 달의 전환 집계가 아직 없습니다.
-          <br />
-          수집기(Apps Script)를 새 버전으로 배포하면 과거 월부터 채워집니다 (README 참고).
-        </div>
-      </section>
-    );
-  }
-
-  const defs = c?.defs || [];
+  const defs = c?.defs || FALLBACK_DEFS;
   const isSourceBased = convBy === 'byMedium' || convBy === 'byChannel';
   const rows = useMemo(
-    () => buildConversionRows(monthData, convBy, defs),
-    [monthData, convBy, defs],
+    () => (c ? buildConversionRows(monthData, convBy, defs) : []),
+    [monthData, convBy, defs, c],
   );
 
   const mx = useMemo(
@@ -195,35 +194,98 @@ export function ConversionSection({
         id="kpisConversion"
         ariaLabel="전환 목표별 지표"
         items={defs.map((d) => {
-          const t = c.total[d.id] || { sessions: 0 };
-          const cur = t.sessions;
-          const pv =
-            prevMonthData && prevMonthData.conv
-              ? partialDays
-                ? convDaily(prevMonthData, d.id, partialDays)
-                : (prevMonthData.conv.total[d.id] || {}).sessions
+          const t = c?.total?.[d.id] || { sessions: 0, users: 0 };
+          const isEstimate = d.id === 'estimate';
+          const isSignup = d.id === 'signup';
+
+          const godoEst =
+            isEstimate && godoQuotes && godoQuotes.monthly
+              ? godoQuotes.monthly[monthData.month]
               : null;
+          const prevGodoEst =
+            isEstimate && godoQuotes && prevMonthData && godoQuotes.monthly
+              ? godoQuotes.monthly[prevMonthData.month]
+              : null;
+
+          const godoSign =
+            isSignup && godoSignups && godoSignups.monthly
+              ? godoSignups.monthly[monthData.month]
+              : null;
+          const prevGodoSign =
+            isSignup && godoSignups && prevMonthData && godoSignups.monthly
+              ? godoSignups.monthly[prevMonthData.month]
+              : null;
+
+          const actualCount = isEstimate ? godoEst : isSignup ? godoSign : null;
+          const prevActualCount = isEstimate ? prevGodoEst : isSignup ? prevGodoSign : null;
+
+          const cur = actualCount != null ? actualCount : t.sessions;
+          const pv =
+            actualCount != null
+              ? prevActualCount
+              : prevMonthData && prevMonthData.conv
+                ? partialDays
+                  ? convDaily(prevMonthData, d.id, partialDays)
+                  : (prevMonthData.conv.total[d.id] || {}).sessions
+                : null;
+
+          const cats =
+            isEstimate && godoQuotes && godoQuotes.byCategory
+              ? godoQuotes.byCategory[monthData.month]
+              : null;
+
           return {
-            label: d.name,
+            label: actualCount != null ? `${d.name} (실제 접수)` : d.name,
             value: cur,
             badge:
               pv != null ? (
                 <DeltaBadge
                   cur={
-                    partialDays ? convDaily(monthData, d.id, partialDays) : cur
+                    actualCount != null
+                      ? cur
+                      : partialDays
+                        ? convDaily(monthData, d.id, partialDays)
+                        : cur
                   }
                   prev={pv}
                   label={partialDays ? '전월 동기간' : '전월'}
                 />
               ) : null,
-            sub: (
-              <div
-                className="l sub1 sub-top"
-                title={`${d.path} 화면을 본 세션 수 ÷ 전체 세션`}
-              >
-                전환율 {pct(cur, monthData.total.sessions)}
-              </div>
-            ),
+            sub:
+              actualCount != null ? (
+                <div
+                  className="l sub1 sub-top"
+                  title={`고도몰 DB 실데이터 ${actualCount}건 / GA4 완료 세션 ${t.sessions}회`}
+                >
+                  <div style={{ color: 'var(--accent, #2563eb)', fontWeight: 600 }}>
+                    고도몰 DB 실건수
+                  </div>
+                  <div style={{ fontSize: '0.85em', opacity: 0.85, marginTop: '2px' }}>
+                    GA4 웹세션 {t.sessions}회 · 웹전환율 {pct(t.sessions, monthData.total.sessions)}
+                  </div>
+                  {cats && (
+                    <div
+                      style={{
+                        fontSize: '0.8em',
+                        color: 'var(--text-muted, #64748b)',
+                        marginTop: '4px',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {Object.entries(cats)
+                        .map(([k, v]) => `${k} ${v}`)
+                        .join(' · ')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className="l sub1 sub-top"
+                  title={`${d.path} 화면을 본 세션 수 ÷ 전체 세션`}
+                >
+                  전환율 {pct(cur, monthData.total.sessions)}
+                </div>
+              ),
           };
         })}
       />
@@ -236,6 +298,16 @@ export function ConversionSection({
         <div className="card-head-bar">
           <h2 id="headingConversion">
             <span>전환 분석</span>
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 400,
+                color: 'var(--text-muted, #64748b)',
+                marginLeft: '8px',
+              }}
+            >
+              (유입 경로별 추적은 GA4 웹 세션 기준)
+            </span>
           </h2>
           <SegmentedControl
             items={CONV_BY}
@@ -319,7 +391,11 @@ export function ConversionSection({
               </tbody>
             </table>
           ) : (
-            <div className="empty">이 기준으로 집계된 전환이 없습니다.</div>
+            <div className="empty" style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+              {!c
+                ? '이 달은 GA4 유입 경로별 세션 전환 수집(2026년 8월 도입) 이전 기간입니다. 상단 고도몰 DB 실접수 건수를 참고해 주세요.'
+                : '이 기준으로 집계된 전환이 없습니다.'}
+            </div>
           )}
         </div>
 

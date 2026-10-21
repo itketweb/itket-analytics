@@ -5,6 +5,7 @@ import { LivePanel } from './components/LivePanel';
 import { MonthView } from './components/MonthView';
 import { PageAnalysisView } from './components/PageAnalysisView';
 import { PageDrawer } from './components/PageDrawer';
+import { PeriodNav } from './components/PeriodNav';
 import { Sidebar } from './components/Sidebar';
 import { YearView } from './components/YearView';
 import { useDashboardData } from './hooks/useDashboardData';
@@ -16,11 +17,13 @@ export function App() {
   const { data, keys, years, latestKey } = useDashboardData();
   const {
     isPage,
+    currentTab,
     pageQ,
     pageM,
     sel,
     setPageM,
     selectPeriod,
+    selectTab,
     openPage,
     resetRoute,
   } = useHashRoute(keys, years, data.months);
@@ -66,7 +69,12 @@ export function App() {
   };
 
   const handleSelectPeriod = (period: string, keepDrawer = false) => {
-    selectPeriod(period);
+    if (isPage) {
+      setPageM(period);
+      openPage(pageQ, period);
+    } else {
+      selectPeriod(period);
+    }
     setPageDrawerQuery(null);
     if (!keepDrawer) setDrawerOpen(false);
   };
@@ -91,15 +99,13 @@ export function App() {
       <Sidebar
         title={data.title}
         open={drawerOpen}
-        isPage={isPage}
-        sel={sel}
-        years={years}
-        months={data.months}
+        currentTab={currentTab}
         onCloseDrawer={() => setDrawerOpen(false)}
         onGoHome={handleGoHome}
-        onGoDashboard={() => handleSelectPeriod(latestKey, false)}
-        onGoPageAnalysis={() => handleOpenPage(pageQ, pageM)}
-        onSelectPeriod={handleSelectPeriod}
+        onSelectTab={(tab) => {
+          selectTab(tab);
+          setDrawerOpen(false);
+        }}
       />
 
       <div className="wrap">
@@ -113,6 +119,16 @@ export function App() {
           onToggleTheme={toggleTheme}
           onExportExcel={handleExportExcel}
         />
+
+        {keys.length > 0 && (
+          <PeriodNav
+            years={years}
+            selectedPeriod={isPage ? (pageM || latestKey) : sel}
+            minAvailableMonth={keys[0]}
+            maxAvailableMonth={latestKey}
+            onSelectPeriod={(period) => handleSelectPeriod(period, false)}
+          />
+        )}
 
         <div className="cont">
           <LivePanel liveUrl={data.liveUrl} />
@@ -141,6 +157,7 @@ export function App() {
                 year={sel}
                 months={data.months}
                 godoSignups={data.godoSignups}
+                godoQuotes={data.godoQuotes}
                 annMetric={annMetric}
                 onChangeAnnMetric={setAnnMetric}
                 onSelectMonth={(mKey) => handleSelectPeriod(mKey, false)}
@@ -151,6 +168,9 @@ export function App() {
                 months={data.months}
                 names={data.names}
                 internal={data.internal}
+                godoSignups={data.godoSignups}
+                godoQuotes={data.godoQuotes}
+                currentTab={currentTab as 'overview' | 'conversion' | 'content'}
                 chartMetric={chartMetric}
                 shopTab={shopTab}
                 convBy={convBy}

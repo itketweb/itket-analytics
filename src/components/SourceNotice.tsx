@@ -5,12 +5,12 @@ export interface SourceLinkItem {
   href?: string;
 }
 
-interface SecSrcProps {
+interface SourceNoticeProps {
   sources: SourceLinkItem[];
   className?: string;
 }
 
-export const SecSrc: FC<SecSrcProps> = ({ sources, className = '' }) => (
+export const SourceNotice: FC<SourceNoticeProps> = ({ sources, className = '' }) => (
   <footer className={`sec-src ${className}`.trim()}>
     {sources.map((src, idx) =>
       src.href ? (
@@ -28,3 +28,6 @@ export const SecSrc: FC<SecSrcProps> = ({ sources, className = '' }) => (
     )}
   </footer>
 );
+
+// 하위 호환 alias
+export const SecSrc = SourceNotice;

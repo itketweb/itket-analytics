@@ -1,36 +1,30 @@
-import { BarChart3, FileSearch, LayoutDashboard, X } from 'lucide-react';
-import type { MonthData } from '../types/analytics';
-import { MonthNav } from './MonthNav';
-import { YearSelector } from './YearSelector';
+import {
+  BarChart3,
+  FileSearch,
+  LayoutDashboard,
+  ShoppingBag,
+  Target,
+  X,
+} from 'lucide-react';
+import type { ViewTab } from '../types/analytics';
 
 interface SidebarProps {
   title: string;
   open: boolean;
-  isPage: boolean;
-  sel: string;
-  years: string[];
-  months: Record<string, MonthData>;
+  currentTab: ViewTab;
   onCloseDrawer: () => void;
   onGoHome: () => void;
-  onGoDashboard: () => void;
-  onGoPageAnalysis: () => void;
-  onSelectPeriod: (period: string, keepDrawer?: boolean) => void;
+  onSelectTab: (tab: ViewTab) => void;
 }
 
 export function Sidebar({
   title,
   open,
-  isPage,
-  sel,
-  years,
-  months,
+  currentTab,
   onCloseDrawer,
   onGoHome,
-  onGoDashboard,
-  onGoPageAnalysis,
-  onSelectPeriod,
+  onSelectTab,
 }: SidebarProps) {
-  const currentYear = sel.slice(0, 4);
 
   return (
     <>
@@ -61,53 +55,53 @@ export function Sidebar({
             onGoHome();
           }}
         >
-          <i>
+          <i className="brand-icon">
             <BarChart3 size={15} aria-hidden="true" />
           </i>
           <span>{title}</span>
         </a>
 
         <nav className="sn" id="sideNav" aria-label="사이드바 메뉴">
+          <div className="lbl">대시보드</div>
           <button
             type="button"
-            className={`m ${!isPage ? 'on' : ''}`}
-            id="navDash"
-            onClick={onGoDashboard}
+            className={`m ${currentTab === 'overview' ? 'on' : ''}`}
+            id="navOverview"
+            onClick={() => onSelectTab('overview')}
           >
             <LayoutDashboard size={15} aria-hidden="true" />
-            <span>대시보드</span>
+            <span>종합 요약</span>
           </button>
           <button
             type="button"
-            className={`m ${isPage ? 'on' : ''}`}
+            className={`m ${currentTab === 'conversion' ? 'on' : ''}`}
+            id="navConversion"
+            onClick={() => onSelectTab('conversion')}
+          >
+            <Target size={15} aria-hidden="true" />
+            <span>전환 분석</span>
+          </button>
+          <button
+            type="button"
+            className={`m ${currentTab === 'content' ? 'on' : ''}`}
+            id="navContent"
+            onClick={() => onSelectTab('content')}
+          >
+            <ShoppingBag size={15} aria-hidden="true" />
+            <span>페이지 · 상품</span>
+          </button>
+
+          <div className="lbl" style={{ marginTop: '0.5rem' }}>검색 · 탐색</div>
+          <button
+            type="button"
+            className={`m ${currentTab === 'page' ? 'on' : ''}`}
             id="navPage"
-            onClick={onGoPageAnalysis}
+            onClick={() => onSelectTab('page')}
           >
             <FileSearch size={15} aria-hidden="true" />
-            <span>페이지 분석</span>
+            <span>URL 분석</span>
           </button>
         </nav>
-
-        <section className="sy" id="sideYearSection" aria-label="연도 선택">
-          <div className="lbl">연도</div>
-          <YearSelector
-            years={years}
-            selectedYear={sel}
-            isPage={isPage}
-            onSelectYear={(y) => onSelectPeriod(y, true)}
-          />
-        </section>
-
-        <section className="sm" id="sideMonthSection" aria-label="기간 선택">
-          <div className="lbl">기간</div>
-          <MonthNav
-            currentYear={currentYear}
-            selectedPeriod={sel}
-            isPage={isPage}
-            months={months}
-            onSelectPeriod={onSelectPeriod}
-          />
-        </section>
 
         {/* 마케팅팀 · 배포 날짜 기준 릴리즈 표기 */}
         <div className="side-foot" id="sideReleaseFoot">

@@ -1,6 +1,7 @@
 export type MetricKey = 'activeUsers' | 'sessions' | 'screenPageViews' | 'newUsers' | 'signups';
 export type ShopTabKey = 'goods' | 'categories' | 'boards';
 export type ConvByKey = 'byMedium' | 'byChannel' | 'byCampaign' | 'byLanding' | 'byGoods';
+export type ViewTab = 'overview' | 'conversion' | 'content' | 'page';
 
 export interface TotalMetrics {
   activeUsers: number;
@@ -150,6 +151,15 @@ export interface GodomallSignups {
   daily?: Record<string, number>;
 }
 
+export interface GodomallQuotes {
+  asOf?: string;
+  source?: string;
+  note?: string;
+  monthly: Record<string, number>;
+  daily?: Record<string, number>;
+  byCategory?: Record<string, Record<string, number>>;
+}
+
 export interface InternalFilterConfig {
   state: 'pending' | 'testing' | 'active';
   since: string | null;
@@ -163,6 +173,7 @@ export interface MetaInfo {
 export interface DashboardPayload {
   names: NamesMap;
   godoSignups: GodomallSignups | null;
+  godoQuotes: GodomallQuotes | null;
   title: string;
   siteUrl: string;
   internal: InternalFilterConfig;
