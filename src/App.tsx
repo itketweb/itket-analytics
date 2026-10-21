@@ -5,6 +5,7 @@ import { LivePanel } from './components/LivePanel';
 import { MonthView } from './components/MonthView';
 import { PageAnalysisView } from './components/PageAnalysisView';
 import { PageDrawer } from './components/PageDrawer';
+import { PeriodNav } from './components/PeriodNav';
 import { Sidebar } from './components/Sidebar';
 import { YearView } from './components/YearView';
 import { useDashboardData } from './hooks/useDashboardData';
@@ -94,16 +95,12 @@ export function App() {
         title={data.title}
         open={drawerOpen}
         currentTab={currentTab}
-        sel={sel}
-        years={years}
-        months={data.months}
         onCloseDrawer={() => setDrawerOpen(false)}
         onGoHome={handleGoHome}
         onSelectTab={(tab) => {
           selectTab(tab);
           setDrawerOpen(false);
         }}
-        onSelectPeriod={handleSelectPeriod}
       />
 
       <div className="wrap">
@@ -117,6 +114,16 @@ export function App() {
           onToggleTheme={toggleTheme}
           onExportExcel={handleExportExcel}
         />
+
+        {!isPage && keys.length > 0 && (
+          <PeriodNav
+            years={years}
+            selectedPeriod={sel}
+            minAvailableMonth={keys[0]}
+            maxAvailableMonth={latestKey}
+            onSelectPeriod={(period) => handleSelectPeriod(period, false)}
+          />
+        )}
 
         <div className="cont">
           <LivePanel liveUrl={data.liveUrl} />

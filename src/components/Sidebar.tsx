@@ -6,37 +6,25 @@ import {
   Target,
   X,
 } from 'lucide-react';
-import type { MonthData, ViewTab } from '../types/analytics';
-import { MonthNav } from './MonthNav';
-import { YearSelector } from './YearSelector';
+import type { ViewTab } from '../types/analytics';
 
 interface SidebarProps {
   title: string;
   open: boolean;
   currentTab: ViewTab;
-  sel: string;
-  years: string[];
-  months: Record<string, MonthData>;
   onCloseDrawer: () => void;
   onGoHome: () => void;
   onSelectTab: (tab: ViewTab) => void;
-  onSelectPeriod: (period: string, keepDrawer?: boolean) => void;
 }
 
 export function Sidebar({
   title,
   open,
   currentTab,
-  sel,
-  years,
-  months,
   onCloseDrawer,
   onGoHome,
   onSelectTab,
-  onSelectPeriod,
 }: SidebarProps) {
-  const currentYear = sel.slice(0, 4);
-  const isPage = currentTab === 'page';
 
   return (
     <>
@@ -114,27 +102,6 @@ export function Sidebar({
             <span>URL 분석</span>
           </button>
         </nav>
-
-        <section className="sy" id="sideYearSection" aria-label="연도 선택">
-          <div className="lbl">연도</div>
-          <YearSelector
-            years={years}
-            selectedYear={sel}
-            isPage={isPage}
-            onSelectYear={(y) => onSelectPeriod(y, true)}
-          />
-        </section>
-
-        <section className="sm" id="sideMonthSection" aria-label="기간 선택">
-          <div className="lbl">기간</div>
-          <MonthNav
-            currentYear={currentYear}
-            selectedPeriod={sel}
-            isPage={isPage}
-            months={months}
-            onSelectPeriod={onSelectPeriod}
-          />
-        </section>
 
         {/* 마케팅팀 · 배포 날짜 기준 릴리즈 표기 */}
         <div className="side-foot" id="sideReleaseFoot">

@@ -1,4 +1,4 @@
-import { SegmentedControl } from './SegmentedControl';
+import { ChevronDown } from 'lucide-react';
 
 interface YearSelectorProps {
   years: string[];
@@ -14,20 +14,26 @@ export function YearSelector({
   onSelectYear,
 }: YearSelectorProps) {
   const activeYear = !isPage
-    ? years.find((y) => selectedYear.startsWith(y)) || ''
+    ? years.find((y) => selectedYear.startsWith(y)) || years[years.length - 1] || ''
     : '';
 
   return (
-    <SegmentedControl
-      id="years"
-      className="years"
-      fullWidth
-      size="md"
-      ariaLabel="연도 선택"
-      items={years.map((y) => [y, `${y}년`])}
-      value={activeYear}
-      onChange={onSelectYear}
-    />
+    <div className="year-select-wrap">
+      <select
+        id="yearSelect"
+        className="year-select"
+        value={activeYear}
+        disabled={isPage}
+        aria-label="연도 선택"
+        onChange={(e) => onSelectYear(e.target.value)}
+      >
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}년
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="year-select-arrow" size={16} aria-hidden="true" />
+    </div>
   );
 }
-
