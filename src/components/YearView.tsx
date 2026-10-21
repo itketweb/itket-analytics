@@ -73,16 +73,31 @@ export function YearView({
   };
 
   const kpiItems = ANNUAL_KPI_DEFS.map(([label, key]) => {
-    const total = sum(key);
-    const prevVal = psum(key);
+    const isSignup = key === 'signups';
+    const hasGodoSign = ks.some((k) => godoSignups?.monthly?.[k] != null);
+    const godoSignSum = ks.reduce(
+      (a, k) => a + (godoSignups?.monthly?.[k] ?? (months[k] ? metricOf(months[k], 'signups') : 0)),
+      0,
+    );
+    const prevGodoSignSum = hasPyData
+      ? pyMonths.reduce(
+          (a, k) => a + (godoSignups?.monthly?.[k] ?? (months[k] ? metricOf(months[k], 'signups') : 0)),
+          0,
+        )
+      : null;
+
+    const total = isSignup && hasGodoSign ? godoSignSum : sum(key);
+    const prevVal = isSignup && hasGodoSign ? prevGodoSignSum : psum(key);
 
     let tooltip: string | undefined = undefined;
     if (key === 'activeUsers') {
       tooltip = `${year}년 일별 방문자 합산 (고도몰 통계와 동일한 방식)`;
+    } else if (isSignup && hasGodoSign) {
+      tooltip = `${year}년 고도몰 DB 실가입자 수 합산`;
     }
 
     return {
-      label: `${label} (${year}년${isFullYear ? '' : ' 누계'})`,
+      label: `${label}${isSignup && hasGodoSign ? ' (실가입)' : ''} (${year}년${isFullYear ? '' : ' 누계'})`,
       value: total,
       badge:
         prevVal != null ? (
@@ -94,6 +109,34 @@ export function YearView({
         </div>
       ),
     };
+  });
+
+  // 6번째 핵심 KPI: 견적요청 (고도몰 DB 실접수)
+  const quoteTotal = ks.reduce((a, k) => {
+    if (godoQuotes && godoQuotes.monthly[k] != null) return a + godoQuotes.monthly[k];
+    const m = okM(months, k);
+    return a + (m?.conv?.total?.estimate?.sessions || 0);
+  }, 0);
+  const pyQuoteTotal = hasPyData
+    ? pyMonths.reduce((a, k) => {
+        if (godoQuotes && godoQuotes.monthly[k] != null) return a + godoQuotes.monthly[k];
+        const m = okM(months, k);
+        return a + (m?.conv?.total?.estimate?.sessions || 0);
+      }, 0)
+    : null;
+
+  kpiItems.push({
+    label: `견적요청 (실접수) (${year}년${isFullYear ? '' : ' 누계'})`,
+    value: quoteTotal,
+    badge:
+      pyQuoteTotal != null ? (
+        <DeltaBadge cur={quoteTotal} prev={pyQuoteTotal} label={prevLabel} />
+      ) : null,
+    sub: (
+      <div className="l sub1 sub-top" title="고도몰 DB 견적 실접수 건수 기준">
+        고도몰 DB 실건수{pyQuoteTotal != null ? ` (${prevLabel} ${fmt(pyQuoteTotal)})` : ''}
+      </div>
+    ),
   });
 
   return (

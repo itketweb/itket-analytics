@@ -168,6 +168,7 @@ export function App() {
                 months={data.months}
                 names={data.names}
                 internal={data.internal}
+                godoSignups={data.godoSignups}
                 godoQuotes={data.godoQuotes}
                 currentTab={currentTab as 'overview' | 'conversion' | 'content'}
                 chartMetric={chartMetric}
