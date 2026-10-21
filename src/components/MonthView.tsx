@@ -19,7 +19,7 @@ import { PopularPagesCard } from './PopularPagesCard';
 import { SegmentedControl } from './SegmentedControl';
 import { ShopCard } from './ShopCard';
 import { WhyCard } from './WhyCard';
-import { SecSrc, type SourceLinkItem } from './SecSrc';
+import { SourceNotice, type SourceLinkItem } from './SourceNotice';
 
 const MONTH_SOURCES: SourceLinkItem[] = [
   { label: 'Google Analytics 4 API', href: 'https://analytics.google.com/' },
@@ -187,7 +187,7 @@ export function MonthView({
         </>
       )}
 
-      <SecSrc sources={MONTH_SOURCES} />
+      <SourceNotice sources={MONTH_SOURCES} />
     </>
   );
 }

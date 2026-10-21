@@ -12,7 +12,7 @@ import { KpiCardsGrid } from './KpiCardsGrid';
 import { PageHeader } from './PageHeader';
 import { SegmentedControl } from './SegmentedControl';
 import { YearSummaryTable } from './YearSummaryTable';
-import { SecSrc, type SourceLinkItem } from './SecSrc';
+import { SourceNotice, type SourceLinkItem } from './SourceNotice';
 
 const YEAR_SOURCES: SourceLinkItem[] = [
   { label: 'Google Analytics 4 API', href: 'https://analytics.google.com/' },
@@ -201,7 +201,7 @@ export function YearView({
         onSelectMonth={onSelectMonth}
       />
 
-      <SecSrc sources={YEAR_SOURCES} />
+      <SourceNotice sources={YEAR_SOURCES} />
     </>
   );
 }

@@ -5,15 +5,19 @@ import type {
   NamesMap,
   PageAnalysisResult,
 } from '../types/analytics';
-import { dur, fmt } from '../utils/format';
+import { fmt } from '../utils/format';
 import { isGap, SUSP_MIN_PV, SUSP_RATIO } from '../utils/metrics';
+import {
+  buildPageDailySeries,
+  buildPageKpis,
+} from '../utils/pageAnalysis';
 import { DailyChart } from './BarChart';
 import { KpiCardsGrid } from './KpiCardsGrid';
 import { PageAnalysisDetails } from './PageAnalysisDetails';
 import { PageAnalysisSkeleton } from './PageAnalysisSkeleton';
 import { PageHeader } from './PageHeader';
 import { PageSearchCard } from './PageSearchCard';
-import { SecSrc, type SourceLinkItem } from './SecSrc';
+import { SourceNotice, type SourceLinkItem } from './SourceNotice';
 
 const PAGE_ANALYSIS_SOURCES: SourceLinkItem[] = [
   { label: 'Google Analytics 4 API', href: 'https://analytics.google.com/' },
@@ -89,40 +93,9 @@ export function PageAnalysisView({
       );
     }
 
-    const days = r.partial
-      ? +new Date()
-          .toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
-          .slice(8)
-      : new Date(+rMonth.slice(0, 4), +rMonth.slice(5), 0).getDate();
-
-    const dmap: Record<string, { date: string; screenPageViews: number }> = {};
-    (r.daily || []).forEach((x) => {
-      dmap[x.date] = x;
-    });
-    const dates = Array.from(
-      { length: days },
-      (_, i) => `${rMonth}-${String(i + 1).padStart(2, '0')}`,
-    );
-    const sv = dates.map((d) => (dmap[d] ? dmap[d].screenPageViews : 0));
+    const { dates, views: sv } = buildPageDailySeries(r, rMonth);
     const ratio = t.activeUsers ? views / t.activeUsers : 0;
-
-    const kpiItems = [
-      { label: '조회수', value: views },
-      { label: '방문자', value: t.activeUsers || 0 },
-      { label: '세션', value: t.sessions || 0 },
-      {
-        label: '처음 들어온 방문',
-        value: (r.entry || { sessions: 0 }).sessions,
-      },
-      {
-        label: '방문자당 체류시간',
-        value: dur(
-          t.activeUsers
-            ? (t.userEngagementDuration || 0) / t.activeUsers
-            : 0,
-        ),
-      },
-    ];
+    const kpiItems = buildPageKpis(r);
 
     const ago = r.at
       ? Math.max(0, Math.round((Date.now() - new Date(r.at).getTime()) / 60000))
@@ -262,7 +235,7 @@ export function PageAnalysisView({
 
       {bodyContent}
 
-      <SecSrc sources={PAGE_ANALYSIS_SOURCES} />
+      <SourceNotice sources={PAGE_ANALYSIS_SOURCES} />
     </>
   );
 }
