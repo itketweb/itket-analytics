@@ -272,6 +272,13 @@ export function ConversionSection({
         })}
       />
 
+      {!godoQuotesLoading && godoQuotes && (
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', margin: '-0.25rem 0 0.75rem', lineHeight: 1.5 }}>
+          견적 요청 실제 접수 건수는 고도몰 견적문의 시트 기준이며 5분 캐시로 조회됩니다.
+          행이 삭제된 직후에는 시트보다 많게 표시될 수 있습니다.
+        </p>
+      )}
+
       <section
         className="card card-conversion"
         id="sectionConversion"
