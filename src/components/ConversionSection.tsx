@@ -218,7 +218,7 @@ export function ConversionSection({
               ? godoSignups.monthly[prevMonthData.month]
               : null;
 
-          const isLoading = isEstimate && !!godoQuotesLoading;
+          const isLoading = !!godoQuotesLoading;
           const actualCount = isEstimate ? godoEst : isSignup ? godoSign : null;
           const prevActualCount = isEstimate ? prevGodoEst : isSignup ? prevGodoSign : null;
 
@@ -263,9 +263,6 @@ export function ConversionSection({
                 >
                   <div style={{ color: 'var(--accent, #2563eb)', fontWeight: 600 }}>
                     고도몰 DB 실건수
-                  </div>
-                  <div style={{ fontSize: '0.85em', opacity: 0.85, marginTop: '2px' }}>
-                    GA4 웹세션 {t.sessions}회 · 웹전환율 {pct(t.sessions, monthData.total.sessions)}
                   </div>
                   {cats && (
                     <div
