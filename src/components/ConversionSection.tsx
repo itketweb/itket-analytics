@@ -267,14 +267,7 @@ export function ConversionSection({
                       .join(' · ')}
                   </div>
                 ) : null
-              ) : (
-                <div
-                  className="l sub1 sub-top"
-                  title={`${d.path} 화면을 본 세션 수 ÷ 전체 세션`}
-                >
-                  전환율 {pct(cur, monthData.total.sessions)}
-                </div>
-              ),
+              ) : null,
           };
         })}
       />
