@@ -53,14 +53,10 @@ export function useDashboardData() {
           payload.updated && payload.updated !== prev.meta.updated
             ? payload.updated
             : prev.meta.updated;
-        if (nextUpdated !== prev.meta.updated) {
-          changed = true;
-        }
+        if (nextUpdated !== prev.meta.updated) changed = true;
         const nextGodoQuotes =
           'godoQuotes' in payload ? (payload.godoQuotes ?? null) : prev.godoQuotes;
-        if (nextGodoQuotes !== prev.godoQuotes) {
-          changed = true;
-        }
+        if (nextGodoQuotes !== prev.godoQuotes) changed = true;
         if (!changed) return prev;
         return {
           ...prev,

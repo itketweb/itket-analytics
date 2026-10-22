@@ -472,7 +472,7 @@ function quotesData_() {
       daily: daily,
       byCategory: byCategory,
     };
-    cache.put(ck, JSON.stringify(result), 1800); // 30분 캐시
+    cache.put(ck, JSON.stringify(result), 300); // 5분 캐시
     return result;
   } catch (e) {
     Logger.log('quotesData_ 오류: ' + String(e && e.message || e));
