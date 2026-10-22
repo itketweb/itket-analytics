@@ -32,7 +32,7 @@ export function KpiCardsGrid({
           <div className="l kpi-label">{item.label}</div>
           <div className="v kpi-value">
             {item.loading
-              ? <span className="skel skel-kpi-val" aria-hidden="true" />
+              ? <span className="skel" style={{ width: '3.5rem', height: '1.75rem', display: 'block' }} aria-hidden="true" />
               : typeof item.value === 'number' ? fmt(item.value) : item.value}
           </div>
           {!item.loading && item.badge}
