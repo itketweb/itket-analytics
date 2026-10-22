@@ -257,24 +257,16 @@ export function ConversionSection({
               ) : null,
             sub:
               actualCount != null ? (
-                <div
-                  className="l sub1 sub-top"
-                >
-                  {cats && (
-                    <div
-                      style={{
-                        fontSize: '0.8em',
-                        color: 'var(--text-muted, #64748b)',
-                        marginTop: '4px',
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {Object.entries(cats)
-                        .map(([k, v]) => `${k} ${v}`)
-                        .join(' · ')}
-                    </div>
-                  )}
-                </div>
+                cats ? (
+                  <div
+                    className="l sub1 sub-top"
+                    style={{ fontSize: '0.8em', color: 'var(--text-muted, #64748b)', lineHeight: 1.3 }}
+                  >
+                    {Object.entries(cats)
+                      .map(([k, v]) => `${k} ${v}`)
+                      .join(' · ')}
+                  </div>
+                ) : null
               ) : (
                 <div
                   className="l sub1 sub-top"

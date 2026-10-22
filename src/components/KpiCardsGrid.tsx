@@ -32,10 +32,12 @@ export function KpiCardsGrid({
           <div className="l kpi-label">{item.label}</div>
           <div className="v kpi-value">
             {item.loading
-              ? <span className="skel" style={{ width: '3rem', height: '2.2rem', display: 'block', borderRadius: '4px' }} aria-hidden="true" />
+              ? <span className="skel" style={{ width: '3rem', height: '2.25rem', display: 'block', borderRadius: '4px' }} aria-hidden="true" />
               : typeof item.value === 'number' ? fmt(item.value) : item.value}
           </div>
-          {!item.loading && item.badge}
+          {item.loading
+            ? <span className="skel" style={{ width: '5rem', height: '0.625rem', display: 'block', borderRadius: '3px', marginTop: '0.4rem' }} aria-hidden="true" />
+            : item.badge}
           {!item.loading && item.sub}
         </article>
       ))}
