@@ -34,6 +34,7 @@ interface MonthViewProps {
   internal: InternalFilterConfig;
   godoSignups?: GodomallSignups | null;
   godoQuotes?: GodomallQuotes | null;
+  godoQuotesLoading?: boolean;
   currentTab: 'overview' | 'conversion' | 'content';
   chartMetric: MetricKey;
   shopTab: ShopTabKey;
@@ -51,6 +52,7 @@ export function MonthView({
   internal,
   godoSignups,
   godoQuotes,
+  godoQuotesLoading,
   currentTab,
   chartMetric,
   shopTab,
@@ -160,6 +162,7 @@ export function MonthView({
           names={names}
           godoSignups={godoSignups}
           godoQuotes={godoQuotes}
+          godoQuotesLoading={godoQuotesLoading}
           convBy={convBy}
           onChangeConvBy={onChangeConvBy}
           onOpenPage={onOpenPage}

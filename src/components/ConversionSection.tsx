@@ -21,6 +21,7 @@ interface ConversionSectionProps {
   names: NamesMap;
   godoSignups?: GodomallSignups | null;
   godoQuotes?: GodomallQuotes | null;
+  godoQuotesLoading?: boolean;
   convBy: ConvByKey;
   onChangeConvBy: (by: ConvByKey) => void;
   onOpenPage: (query: string) => void;
@@ -141,6 +142,7 @@ export function ConversionSection({
   names,
   godoSignups,
   godoQuotes,
+  godoQuotesLoading,
   convBy,
   onChangeConvBy,
   onOpenPage,
@@ -216,6 +218,7 @@ export function ConversionSection({
               ? godoSignups.monthly[prevMonthData.month]
               : null;
 
+          const isLoading = isEstimate && !!godoQuotesLoading;
           const actualCount = isEstimate ? godoEst : isSignup ? godoSign : null;
           const prevActualCount = isEstimate ? prevGodoEst : isSignup ? prevGodoSign : null;
 
@@ -235,8 +238,9 @@ export function ConversionSection({
               : null;
 
           return {
-            label: actualCount != null ? `${d.name} (실제 접수)` : d.name,
+            label: !isLoading && actualCount != null ? `${d.name} (실제 접수)` : d.name,
             value: cur,
+            loading: isLoading,
             badge:
               pv != null ? (
                 <DeltaBadge

@@ -18,7 +18,15 @@ const CURRENT_MONTH_POLL_MS = 300_000; // 5 minutes
 export function useDashboardData() {
   const [data, setData] = useState<DashboardPayload>(() => {
     const w = typeof window !== 'undefined' ? window.__DATA__ : undefined;
-    return w && typeof w === 'object' ? w : DEFAULT_DATA;
+    const d = (w && typeof w === 'object' ? w : DEFAULT_DATA) as DashboardPayload;
+    return { ...d, godoQuotes: null }; // 빌드 스냅샷 억제: 최초 live poll 결과로 교체
+  });
+
+  // live poll이 완료될 때까지 견적 카드를 스켈레톤으로 표시
+  const [godoQuotesLoading, setGodoQuotesLoading] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const w = window.__DATA__;
+    return !!(w && typeof w === 'object' && (w as DashboardPayload).liveUrl);
   });
 
   const keys = useMemo(() => Object.keys(data.months).sort(), [data.months]);
@@ -37,7 +45,10 @@ export function useDashboardData() {
         updated?: string;
         godoQuotes?: GodomallQuotes | null;
       };
-      if (!payload.months) return;
+      if (!payload.months) {
+        setGodoQuotesLoading(false);
+        return;
+      }
 
       setData((prev) => {
         let changed = false;
@@ -67,6 +78,8 @@ export function useDashboardData() {
       });
     } catch {
       // Ignore transient network errors during background polling
+    } finally {
+      setGodoQuotesLoading(false);
     }
   }, [data.liveUrl]);
 
@@ -86,5 +99,5 @@ export function useDashboardData() {
     };
   }, [data.liveUrl, pollCur]);
 
-  return { data, keys, years, latestKey };
+  return { data, keys, years, latestKey, godoQuotesLoading };
 }

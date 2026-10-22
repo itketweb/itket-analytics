@@ -14,7 +14,7 @@ import { useTheme } from './hooks/useTheme';
 import type { ConvByKey, MetricKey, ShopTabKey } from './types/analytics';
 
 export function App() {
-  const { data, keys, years, latestKey } = useDashboardData();
+  const { data, keys, years, latestKey, godoQuotesLoading } = useDashboardData();
   const {
     isPage,
     currentTab,
@@ -170,6 +170,7 @@ export function App() {
                 internal={data.internal}
                 godoSignups={data.godoSignups}
                 godoQuotes={data.godoQuotes}
+                godoQuotesLoading={godoQuotesLoading}
                 currentTab={currentTab as 'overview' | 'conversion' | 'content'}
                 chartMetric={chartMetric}
                 shopTab={shopTab}

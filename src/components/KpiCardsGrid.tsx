@@ -3,6 +3,7 @@ import { fmt } from '../utils/format';
 export interface KpiItem {
   label: string;
   value: string | number;
+  loading?: boolean;
   sub?: React.ReactNode;
   badge?: React.ReactNode;
 }
@@ -30,10 +31,12 @@ export function KpiCardsGrid({
         <article key={item.label || idx} className="kpi">
           <div className="l kpi-label">{item.label}</div>
           <div className="v kpi-value">
-            {typeof item.value === 'number' ? fmt(item.value) : item.value}
+            {item.loading
+              ? <span className="skel skel-kpi-val" aria-hidden="true" />
+              : typeof item.value === 'number' ? fmt(item.value) : item.value}
           </div>
-          {item.badge}
-          {item.sub}
+          {!item.loading && item.badge}
+          {!item.loading && item.sub}
         </article>
       ))}
     </section>
