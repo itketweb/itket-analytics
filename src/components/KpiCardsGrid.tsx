@@ -36,7 +36,7 @@ export function KpiCardsGrid({
               : typeof item.value === 'number' ? fmt(item.value) : item.value}
           </div>
           {item.loading
-            ? <span className="skel" style={{ width: '4.5rem', height: '0.625rem', display: 'block', borderRadius: '3px', marginTop: '0.1rem' }} aria-hidden="true" />
+            ? <span className="skel" style={{ width: '4.5rem', height: '0.625rem', display: 'block', borderRadius: '3px' }} aria-hidden="true" />
             : item.badge}
           {!item.loading && item.sub}
         </article>
