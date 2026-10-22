@@ -259,11 +259,7 @@ export function ConversionSection({
               actualCount != null ? (
                 <div
                   className="l sub1 sub-top"
-                  title={`고도몰 DB 실데이터 ${actualCount}건 / GA4 완료 세션 ${t.sessions}회`}
                 >
-                  <div style={{ color: 'var(--accent, #2563eb)', fontWeight: 600 }}>
-                    고도몰 DB 실건수
-                  </div>
                   {cats && (
                     <div
                       style={{
