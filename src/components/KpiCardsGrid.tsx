@@ -31,9 +31,7 @@ export function KpiCardsGrid({
         <article key={item.label || idx} className="kpi">
           <div className="l kpi-label">{item.label}</div>
           <div className="v kpi-value">
-            {item.loading
-              ? <span className="skel" style={{ width: '3.5rem', height: '1.75rem', display: 'block' }} aria-hidden="true" />
-              : typeof item.value === 'number' ? fmt(item.value) : item.value}
+            {item.loading ? '—' : typeof item.value === 'number' ? fmt(item.value) : item.value}
           </div>
           {!item.loading && item.badge}
           {!item.loading && item.sub}
