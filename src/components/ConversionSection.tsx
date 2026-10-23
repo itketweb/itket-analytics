@@ -8,7 +8,7 @@ import type {
   NamesMap,
 } from '../types/analytics';
 import { fmt, pct } from '../utils/format';
-import { CONV_BY, convDaily } from '../utils/metrics';
+import { CONV_BY, convDaily, godoCount } from '../utils/metrics';
 import { DeltaBadge } from './DeltaBadge';
 import { KpiCardsGrid } from './KpiCardsGrid';
 import { ProgressBar } from './ProgressBar';
@@ -200,22 +200,20 @@ export function ConversionSection({
           const isEstimate = d.id === 'estimate';
           const isSignup = d.id === 'signup';
 
-          const godoEst =
-            isEstimate && godoQuotes && godoQuotes.monthly
-              ? godoQuotes.monthly[monthData.month]
-              : null;
-          const prevGodoEst =
-            isEstimate && godoQuotes && prevMonthData && godoQuotes.monthly
-              ? godoQuotes.monthly[prevMonthData.month]
-              : null;
+          const godoEst = isEstimate ? godoCount(godoQuotes, monthData.month, null) : null;
+          // 진행 중인 달은 전월도 같은 1~n일만 (월 전체와 비교하면 감소로 보임)
+          const prevGodoEst = isEstimate
+            ? godoCount(godoQuotes, prevMonthData?.month, partialDays)
+            : null;
 
-          const godoSign =
-            isSignup && godoSignups && godoSignups.monthly
-              ? godoSignups.monthly[monthData.month]
-              : null;
-          const prevGodoSign =
-            isSignup && godoSignups && prevMonthData && godoSignups.monthly
-              ? godoSignups.monthly[prevMonthData.month]
+          const godoSign = isSignup ? godoCount(godoSignups, monthData.month, null) : null;
+          // 가입 실데이터는 일별 값이 없으면 동기간 합산이 불가 → null(비교 생략)
+          const prevGodoSign = isSignup
+            ? godoCount(godoSignups, prevMonthData?.month, partialDays)
+            : null;
+          const prevSignFull =
+            isSignup && partialDays && prevGodoSign == null
+              ? godoCount(godoSignups, prevMonthData?.month, null)
               : null;
 
           const isLoading = !!godoQuotesLoading;
@@ -238,7 +236,7 @@ export function ConversionSection({
               : null;
 
           return {
-            label: !isLoading && actualCount != null ? `${d.name} (실제 접수)` : d.name,
+            label: !isLoading && actualCount != null ? `${getDefShortName(d)} (실제 접수)` : getDefShortName(d),
             value: cur,
             loading: isLoading,
             badge:
@@ -266,6 +264,13 @@ export function ConversionSection({
                       .map(([k, v]) => `${k} ${v}`)
                       .join(' · ')}
                   </div>
+                ) : prevSignFull != null ? (
+                  <div
+                    className="l sub1 sub-top"
+                    title="고도몰 가입자 실데이터는 월 합계만 있어 같은 기간끼리 비교할 수 없습니다"
+                  >
+                    전월 전체 {fmt(prevSignFull)} · 일별 자료 없어 동기간 비교 생략
+                  </div>
                 ) : null
               ) : null,
           };
@@ -273,9 +278,8 @@ export function ConversionSection({
       />
 
       <p style={{ fontSize: '0.72rem', color: 'var(--text-muted, #94a3b8)', margin: '-0.25rem 0 0.75rem', lineHeight: 1.5 }}>
-        견적 요청 실제 접수 건수는 고도몰 견적문의 시트(접수날짜 열) 기준이며 5분 캐시로 조회됩니다.
-        시트보다 <b>많을 경우</b> 행 삭제 직후 캐시가 남은 것이며 5분 내 해소됩니다.
-        시트보다 <b>적을 경우</b> 접수날짜가 비어 있는 행이 있거나, 최근 추가된 행이 아직 반영되지 않은 것입니다.
+        견적 요청은 고도몰 견적문의 시트(접수날짜 열), 회원가입은 고도몰 회원 DB(가입일) 기준이며 15분 캐시로 조회합니다.
+        카드 제목에 "(실제 접수)"가 없으면 연동 실패로 GA4 완료화면 세션(가입은 마지막 저장된 월 합계)을 대신 표시한 것입니다.
       </p>
 
       <section

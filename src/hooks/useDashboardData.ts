@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { DashboardPayload, GodomallQuotes, MonthData } from '../types/analytics';
+import type { DashboardPayload, GodomallQuotes, GodomallSignups, MonthData } from '../types/analytics';
 
 const DEFAULT_DATA: DashboardPayload = {
   names: {},
@@ -44,6 +44,7 @@ export function useDashboardData() {
         months?: Record<string, MonthData>;
         updated?: string;
         godoQuotes?: GodomallQuotes | null;
+        godoSignups?: GodomallSignups | null;
       };
       if (!payload.months) {
         setGodoQuotesLoading(false);
@@ -68,12 +69,16 @@ export function useDashboardData() {
         const nextGodoQuotes =
           'godoQuotes' in payload ? (payload.godoQuotes ?? null) : prev.godoQuotes;
         if (nextGodoQuotes !== prev.godoQuotes) changed = true;
+        // 가입 실데이터(고도몰 DB 일별) — 조회 실패(null)면 빌드 스냅샷(월 합계)을 그대로 둔다
+        const nextGodoSignups = payload.godoSignups ? payload.godoSignups : prev.godoSignups;
+        if (nextGodoSignups !== prev.godoSignups) changed = true;
         if (!changed) return prev;
         return {
           ...prev,
           months: nextMonths,
           meta: { ...prev.meta, updated: nextUpdated },
           godoQuotes: nextGodoQuotes,
+          godoSignups: nextGodoSignups,
         };
       });
     } catch {

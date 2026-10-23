@@ -1,6 +1,6 @@
-import type { GodomallQuotes, GodomallSignups, MetricKey, MonthData } from '../types/analytics';
+import type { GodomallQuotes, MetricKey, MonthData } from '../types/analytics';
 import { dur, fmt } from '../utils/format';
-import { metricOf, sumDays } from '../utils/metrics';
+import { convDaily, godoCount, metricOf, sumDays } from '../utils/metrics';
 import { DeltaBadge } from './DeltaBadge';
 import { KpiCardsGrid, type KpiItem } from './KpiCardsGrid';
 
@@ -9,8 +9,8 @@ interface MonthKpiCardsProps {
   prevMonthData?: MonthData | null;
   yoyMonthData?: MonthData | null;
   suspExcess: number;
-  godoSignups?: GodomallSignups | null;
   godoQuotes?: GodomallQuotes | null;
+  godoQuotesLoading?: boolean;
 }
 
 const KPI_DEFS: Array<[string, MetricKey]> = [
@@ -18,7 +18,6 @@ const KPI_DEFS: Array<[string, MetricKey]> = [
   ['신규 방문자', 'newUsers'],
   ['세션', 'sessions'],
   ['페이지뷰', 'screenPageViews'],
-  ['회원가입', 'signups'],
 ];
 
 export function MonthKpiCards({
@@ -26,7 +25,8 @@ export function MonthKpiCards({
   prevMonthData: prev,
   yoyMonthData: yoy,
   suspExcess,
-  godoSignups,
+  godoQuotes,
+  godoQuotesLoading,
 }: MonthKpiCardsProps) {
   const partialDays = m.partial ? m.daily.length : null;
   const prevLabel = partialDays ? '전월 동기간' : '전월';
@@ -57,31 +57,11 @@ export function MonthKpiCards({
   }
 
   const items: KpiItem[] = KPI_DEFS.map(([label, key]) => {
-    const isSignup = key === 'signups';
-    const godoSign =
-      isSignup && godoSignups && godoSignups.monthly[m.month] != null
-        ? godoSignups.monthly[m.month]
-        : null;
-    const prevGodoSign =
-      isSignup && godoSignups && prev && godoSignups.monthly[prev.month] != null
-        ? godoSignups.monthly[prev.month]
-        : null;
-    const yoyGodoSign =
-      isSignup && godoSignups && yoy && godoSignups.monthly[yoy.month] != null
-        ? godoSignups.monthly[yoy.month]
-        : null;
-
-    const cur = godoSign != null ? godoSign : metricOf(m, key);
-    const prevVal =
-      godoSign != null
-        ? prevGodoSign
-        : partialDays
-          ? (prev ? sumDays(prev, key, partialDays) : null)
-          : (prev ? metricOf(prev, key) : null);
-    const yoyVal =
-      godoSign != null
-        ? yoyGodoSign
-        : (yoy ? metricOf(yoy, key) : null);
+    const cur = metricOf(m, key);
+    const prevVal = partialDays
+      ? (prev ? sumDays(prev, key, partialDays) : null)
+      : (prev ? metricOf(prev, key) : null);
+    const yoyVal = yoy ? metricOf(yoy, key) : null;
 
     const badge = partialDays ? (
       prevVal != null ? (
@@ -111,10 +91,6 @@ export function MonthKpiCards({
       tooltip = `순 방문자(월 중복 제거): ${fmt(m.total.activeUsers)}명\n(표시된 값은 고도몰 통계와 동일한 일별 방문자 합산입니다)`;
     } else if (key === 'screenPageViews' && suspExcess > 0) {
       tooltip = `의심분(새로고침 추정) 약 ${fmt(suspExcess)}뷰 제외 시 ≈ ${fmt(cur - suspExcess)}뷰`;
-    } else if (isSignup && godoSign != null) {
-      tooltip = `고도몰 DB 실가입자 수: ${godoSign}명 (GA4 완료화면 세션: ${metricOf(m, 'signups')}명)`;
-    } else if (key === 'signups' && m.signupSource === 'join_ok') {
-      tooltip = '가입 완료 화면(/member/join_ok.php)을 본 사용자 수 기준';
     }
 
     const sub = (
@@ -129,6 +105,55 @@ export function MonthKpiCards({
       badge,
       sub,
     };
+  });
+
+  // 견적 요청: 견적문의 시트 실접수 우선, 시트 연동 실패 시 GA4 완료화면 세션
+  const godoEst = godoCount(godoQuotes, m.month, partialDays);
+  const ga4Est = (m.conv?.total?.estimate || { sessions: 0 }).sessions;
+  const estCur = godoEst != null ? godoEst : ga4Est;
+  const estPrev =
+    godoEst != null
+      ? godoCount(godoQuotes, prev?.month, partialDays)
+      : prev && prev.conv
+        ? partialDays
+          ? convDaily(prev, 'estimate', partialDays)
+          : (prev.conv.total.estimate || { sessions: 0 }).sessions
+        : null;
+  const estYoy =
+    godoEst != null
+      ? godoCount(godoQuotes, yoy?.month, null)
+      : yoy && yoy.conv
+        ? (yoy.conv.total.estimate || { sessions: 0 }).sessions
+        : null;
+  const estCurForDelta =
+    godoEst == null && partialDays ? convDaily(m, 'estimate', partialDays) : estCur;
+
+  items.unshift({
+    label: !godoQuotesLoading && godoEst != null ? '견적 요청 (실제 접수)' : '견적 요청',
+    value: estCur,
+    loading: !!godoQuotesLoading,
+    badge: partialDays ? (
+      estPrev != null ? (
+        <DeltaBadge cur={estCurForDelta} prev={estPrev} label="전월 동기간" />
+      ) : null
+    ) : (
+      <>
+        <DeltaBadge cur={estCur} prev={estPrev} label="전월" />
+        <DeltaBadge cur={estCur} prev={estYoy} label="전년" />
+      </>
+    ),
+    sub: (
+      <div
+        className="l sub1 sub-top"
+        title={
+          godoEst != null
+            ? `견적문의 시트 실접수: ${fmt(godoEst)}건 (GA4 완료화면 세션: ${fmt(ga4Est)}건)`
+            : '시트 연동 실패 — GA4 견적 완료화면(/dbk/dbk_estimate_complete.php) 세션 기준'
+        }
+      >
+        {estPrev != null ? `${prevLabel} ${fmt(estPrev)}` : `${prevLabel} ―`}
+      </div>
+    ),
   });
 
   items.push({

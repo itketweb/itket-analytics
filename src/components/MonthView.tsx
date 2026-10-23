@@ -125,8 +125,8 @@ export function MonthView({
             prevMonthData={prev}
             yoyMonthData={yoy}
             suspExcess={sp.excess}
-            godoSignups={godoSignups}
             godoQuotes={godoQuotes}
+            godoQuotesLoading={godoQuotesLoading}
           />
 
           <section

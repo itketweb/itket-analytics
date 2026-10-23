@@ -12,6 +12,8 @@
  */
 // 견적 요청 실접수 집계용 스프레드시트 (견적문의 시트)
 const QUOTES_SHEET_ID = '18tMYBQLuIhkmX_x_c8MK-aNXlGvOgz1TWauvqo8Dmjg';
+// 회원가입 실데이터: 아이티켓 서버 조회 API(가입일별 건수만, 개인정보 없음). 키는 스크립트 속성 ITKET_SYNC_KEY
+const SIGNUPS_API_URL = 'https://www.itket.com/dbk/dbk_member_stats.php';
 
 const CFG = {
   PROPERTY_ID: '257396991',   // GA4 관리 → 속성 설정 → 속성 ID
@@ -430,7 +432,7 @@ function classifyTitle_(title) {
 /** 견적 스프레드시트(견적문의 시트)에서 월별·일별·카테고리별 접수 건수를 집계한다. 30분 캐시. */
 function quotesData_() {
   const cache = CacheService.getScriptCache();
-  const ck = 'quotesData_v2';
+  const ck = 'quotesData_v3';
   const hit = cache.get(ck);
   if (hit) { try { return JSON.parse(hit); } catch (e) { /* 캐시 손상 — 재계산 */ } }
   try {
@@ -452,7 +454,8 @@ function quotesData_() {
         ds = Utilities.formatDate(dateVal, 'Asia/Seoul', 'yyyy-MM-dd');
       } else {
         const s = String(dateVal).trim();
-        const m = s.match(/(\d{4})[.\-\s](\d{1,2})[.\-\s](\d{1,2})/);
+        // '2026-10-22 9:00' 외에 자동저장 행의 '2026. 10. 22 오후 3:12:00'(구분자 뒤 공백)도 허용
+        const m = s.match(/(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})/);
         if (!m) continue;
         ds = m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
       }
@@ -472,10 +475,45 @@ function quotesData_() {
       daily: daily,
       byCategory: byCategory,
     };
-    cache.put(ck, JSON.stringify(result), 300); // 5분 캐시
+    cache.put(ck, JSON.stringify(result), 900); // 15분 캐시
     return result;
   } catch (e) {
     Logger.log('quotesData_ 오류: ' + String(e && e.message || e));
+    return null;
+  }
+}
+
+/** 고도몰 회원 DB(es_member) 가입일별 건수 → { monthly, daily }. 15분 캐시. 실패하면 null(대시보드는 빌드 스냅샷 사용). */
+function signupsData_() {
+  const cache = CacheService.getScriptCache();
+  const ck = 'signupsData_v1';
+  const hit = cache.get(ck);
+  if (hit) { try { return JSON.parse(hit); } catch (e) { /* 캐시 손상 — 재계산 */ } }
+  try {
+    const key = PropertiesService.getScriptProperties().getProperty('ITKET_SYNC_KEY');
+    if (!key) throw new Error('스크립트 속성 ITKET_SYNC_KEY 가 없습니다');
+    const resp = UrlFetchApp.fetch(SIGNUPS_API_URL, {
+      method: 'post',
+      payload: { key: key, since: CFG.START_MONTH + '-01' },   // 키는 URL이 아닌 POST 본문으로
+      followRedirects: false,
+      muteHttpExceptions: true,
+    });
+    if (resp.getResponseCode() !== 200) throw new Error('가입 API 응답 코드 ' + resp.getResponseCode());
+    const data = JSON.parse(resp.getContentText('UTF-8'));
+    if (!data.ok || !data.daily) throw new Error('가입 API 오류: ' + (data.error || '형식 불일치'));
+    const today = todayKst_();
+    const monthly = {}, daily = {};
+    Object.keys(data.daily).forEach((d) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > today) return;
+      const n = Number(data.daily[d]) || 0;
+      daily[d] = n;
+      monthly[d.slice(0, 7)] = (monthly[d.slice(0, 7)] || 0) + n;
+    });
+    const result = { asOf: today, source: '고도몰 회원 DB(es_member) 가입일 기준 — 아이티켓 서버 조회 API', monthly: monthly, daily: daily };
+    cache.put(ck, JSON.stringify(result), 900);
+    return result;
+  } catch (e) {
+    Logger.log('signupsData_ 오류: ' + String(e && e.message || e));
     return null;
   }
 }
@@ -491,14 +529,25 @@ function doGet(e) {
       const store = load_(), cur = todayKst_().slice(0, 7), prev = addMonth_(cur, -1);
       const months = {};
       [cur, prev].forEach((m) => { if (store.months[m]) months[m] = store.months[m]; });
-      body = { updated: store.updated, months: months, quota: store.quota || null, godoQuotes: quotesData_() };
+      body = { updated: store.updated, months: months, quota: store.quota || null, godoQuotes: quotesData_(), godoSignups: signupsData_() };
     } else {
       const store = load_();
       body = JSON.parse(JSON.stringify(store)); // shallow copy
       body.godoQuotes = quotesData_();
+      body.godoSignups = signupsData_();
     }
   } catch (err) { body = { error: String(err && err.message || err) }; }
   return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/** 한 번만 실행: 견적 시트(spreadsheets)·가입 API(외부 호출) 권한 승인 창을 띄우고 둘 다 연결되는지 로그로 확인한다.
+ *  웹앱 로그에 'quotesData_ 오류: 권한 없음' / 'signupsData_ 오류' 가 나오면 에디터에서 실행. */
+function authorizeSheets() {
+  ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/script.external_request']);
+  Logger.log('시트 연결 확인: ' + SpreadsheetApp.openById(QUOTES_SHEET_ID).getName());
+  CacheService.getScriptCache().remove('signupsData_v1');
+  const s = signupsData_();
+  Logger.log(s ? '가입 API 연결 확인: 최근 3개월 ' + JSON.stringify(Object.keys(s.monthly).sort().slice(-3).map((m) => m + '=' + s.monthly[m])) : '가입 API 연결 실패 — 위 signupsData_ 오류 참고');
 }
 
 /** 한 번만 실행: 자동 실행 트리거(30분 / 3시간)를 만든다. 다시 실행해도 중복되지 않는다. */

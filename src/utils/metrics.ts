@@ -91,6 +91,22 @@ export const k2v = (r: DailyMetric, m: MonthData): DailyMetricWithSignups => {
   return { ...r, signups: s ? s.count : 0 };
 };
 
+/** 시트 실집계(월별·일별) 건수. n 이 있으면 그 달 1~n일만 합산(전월 동기간 비교용). 데이터 없으면 null. */
+export function godoCount(
+  src: { monthly: Record<string, number>; daily?: Record<string, number> } | null | undefined,
+  month: string | undefined,
+  n: number | null,
+): number | null {
+  if (!src || !month) return null;
+  if (!n) return src.monthly[month] ?? null;
+  if (!src.daily) return null;
+  let sum = 0;
+  for (const [d, c] of Object.entries(src.daily)) {
+    if (d.slice(0, 7) === month && +d.slice(8) <= n) sum += c;
+  }
+  return sum;
+}
+
 export const convDaily = (m: MonthData, id: string, n: number | null): number =>
   ((m.conv && m.conv.daily[id]) || [])
     .filter((r) => !n || +r.date.slice(8) <= n)

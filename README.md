@@ -30,6 +30,18 @@ Google Cloud 콘솔·서비스 계정·JSON 키는 **필요 없다.** GA4 를 �
 ## 코드를 고쳤을 때 (Apps Script)
 `apps-script/Code.gs` 를 고치면 Apps Script 에디터에 붙여넣고 저장한 뒤 **배포 → 배포 관리 → 연필 → 버전: 새 버전 → 배포** 해야 웹앱에 반영된다(주소는 그대로). 수집 항목을 바꿨으면 `SCHEMA` 숫자를 올리면 과거 월도 다시 채워진다. 트리거를 다시 만들려면 `setupTrigger` 실행.
 
+## 견적·회원가입 실데이터 연동 (2026-10-23 추가)
+견적 요청·회원가입 카드는 GA4 완료화면 세션이 아니라 **실제 접수·가입 건수**를 보여 준다. 웹앱(`?mode=cur`, 기본)이 함께 내려준다.
+
+| 항목 | 출처 | Code.gs |
+|---|---|---|
+| 견적 요청 (`godoQuotes`) | 견적문의 구글 시트(`QUOTES_SHEET_ID`, 접수날짜 열) 월별 행 수 | `quotesData_()` (15분 캐시) |
+| 회원가입 (`godoSignups`) | 아이티켓 서버 조회 API `/dbk/dbk_member_stats.php` — 회원 DB `es_member.entryDt`(관리자 회원 리스트의 회원가입일과 같은 기준) 일별 **건수만**(개인정보 없음). 2026-10-23 관리자 화면과 22개월 전부 일치 확인 | `signupsData_()` (15분 캐시) |
+
+- 처음 한 번: 스크립트 속성 `ITKET_SYNC_KEY` 등록(견적 동기화 Apps Script "아이티켓 견적문의(팀즈)"의 같은 이름 속성 값과 동일) → 에디터에서 **`authorizeSheets` 실행 → 시트·외부 호출 권한 허용**. 로그에 `시트 연결 확인`·`가입 API 연결 확인`이 나오면 정상.
+- 연동이 실패하면 견적은 GA4 완료화면 세션으로, 회원가입은 빌드 때 넣은 `data/ref/godomall-signups.json`(월 합계)으로 대신 표시된다. 카드 제목에 **"(실제 접수)"가 없으면 대체값**이다. 원인은 에디터에서 `authorizeSheets` 실행 로그로 확인한다(`quotesData_ 오류` / `signupsData_ 오류`).
+- 서버 API 파일: `/module/Controller/Front/Dbk/DbkMemberStatsController.php` (사본: `server/DbkMemberStatsController.php`) (조회 전용, 키는 `DbkSheetSyncController::SYNC_KEY` 재사용). 문제가 생기면 이 파일만 지우면 된다.
+
 ## 전환·페이지 분석·회사 IP 제외 (2026-10-15 추가)
 **수집기를 새 버전으로 배포해야 동작한다**: `apps-script/Code.gs` 전체를 Apps Script 에디터에 붙여넣고 저장 → 배포 → 배포 관리 → 연필 → 버전: 새 버전 → 배포. `SCHEMA` 가 3 으로 올라가 있어 다음 `collectAll`(3시간마다)부터 과거 월이 전환·이벤트 항목까지 다시 채워진다(바로 채우려면 에디터에서 `collectAll` 실행, 시간 초과 시 다시 실행). 배포 전에는 대시보드의 전환 카드가 "집계 전", 페이지 분석은 "새 버전이 아님" 안내를 보여 준다.
 
